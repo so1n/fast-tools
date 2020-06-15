@@ -1,12 +1,10 @@
 import abc
-from contextvars import ContextVar
-from contextvars import copy_context
-from contextvars import Token
+from contextvars import ContextVar, Token, copy_context
 from typing import Any, Callable, Dict, KeysView, Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 from starlette.middleware.base import RequestResponseEndpoint
+from starlette.requests import Request
 from starlette.responses import Response
 
 
@@ -23,7 +21,7 @@ class BaseContextQuery(metaclass=abc.ABCMeta):
         cls = self.__class__
         key: str = f'{cls.__name__}:{key}'
         if key in cls._set:
-            # var must be globally unique
+            # key must be globally unique
             raise RuntimeError(f'key:{key} already exists')
         cls._set.add(key)
 
@@ -44,11 +42,11 @@ class HeaderQuery(BaseContextQuery):
         super().__init__(key)
 
     def __set__(self, instance, request: Request):
+        headers = request.headers
         if self._key != self._key.lower():
-            headers = request.headers
             value = headers.get(self._key) or headers.get(self._key.lower())
         else:
-            value = request.headers.get(self._key)
+            value = headers.get(self._key)
 
         if not value and self._default_func is not None:
             value = self._default_func(request)

@@ -9,10 +9,10 @@ __date__ = '2020-06'
 import uuid
 import httpx
 from fastapi import FastAPI
-from fastapi_tools.context import ContextMiddleware
 from fastapi_tools.context import ContextBaseModel
-from fastapi_tools.context import HeaderQuery
+from fastapi_tools.context import ContextMiddleware
 from fastapi_tools.context import CustomQuery
+from fastapi_tools.context import HeaderQuery
 
 app = FastAPI()
 client = httpx.AsyncClient()
@@ -21,7 +21,7 @@ client = httpx.AsyncClient()
 class ContextModel(ContextBaseModel):
     request_id: str = HeaderQuery(
         'X-Request-Id',
-        default_func=lambda x: str(uuid.uuid4())
+        default_func=lambda request: str(uuid.uuid4())
     )
     ip: str = HeaderQuery(
         'X-Real-IP',
@@ -41,7 +41,7 @@ async def root():
         "message": {
             key: value
             for key, value in ContextModel.to_dict().items()
-            if not key.startswith('custom')
+            if not key.startswith('custom')  # CustomQuery key name custom:****
         }
     }
 
