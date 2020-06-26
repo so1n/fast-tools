@@ -69,11 +69,10 @@ class Share(object):
         args: Optional[list] = None,
         kwargs: Optional[dict] = None
     ):
-        args = args if args else []
-        kwargs = kwargs if kwargs else {}
+        args: list = args if args else []
+        kwargs: dict = kwargs if kwargs else {}
         token: Token = self.get_token(key)
-        can_do = token.can_do()
-        if can_do:
+        if token.can_do():
             try:
                 result = await func(*args, **kwargs)
                 token.set_result(result)
