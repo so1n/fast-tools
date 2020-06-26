@@ -1,14 +1,14 @@
 import asyncio
-from typing import Any, Callable, Coroutine, Dict, TypeVar, Optional
+from typing import Any, Callable, Dict, TypeVar, Optional
 
 __all__ = ('Share', 'Token')
 _Tp = TypeVar('_Tp')
 
 
 class Token(object):
-    def __init__(self, key, share: 'Share'):
-        self._share = share
-        self._key = key
+    def __init__(self, key: str, share: 'Share'):
+        self._share: 'Share' = share
+        self._key: str = key
         self._future: Optional[asyncio.Future] = None
 
     def can_do(self) -> bool:
@@ -28,7 +28,7 @@ class Token(object):
             await self._future
         return self._future.result()
 
-    def set_result(self, result) -> bool:
+    def set_result(self, result: Any) -> bool:
         if self._future and not self._future.done():
             if isinstance(result, Exception):
                 self._future.set_exception(result)
@@ -44,7 +44,7 @@ class Share(object):
         self._future_dict: Dict[str, Token] = dict()
         self._delay_clean_time = delay_clean_time
 
-    def get_token(self, key) -> Token:
+    def get_token(self, key: str) -> Token:
         if key not in self._future_dict:
             token: 'Token' = Token(key, self)
             self._future_dict[key] = token
@@ -54,7 +54,7 @@ class Share(object):
         for key, token in self._future_dict.items():
             token.cancel()
 
-    async def delay_del_token(self, key):
+    async def delay_del_token(self, key: str):
         await asyncio.sleep(self._delay_clean_time)
 
         if key in self._future_dict:
