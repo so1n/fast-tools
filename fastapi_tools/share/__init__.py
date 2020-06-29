@@ -24,7 +24,12 @@ class Token(object):
         return False
 
     async def await_done(self) -> Optional[Any]:
-        if self._future and not self._future.done():
+        if not self._future:
+            raise RuntimeError(
+                f'You should use Token<{self._key}>.can_do() '
+                f'before Token<{self._key}>.await_done()'
+            )
+        if not self._future.done():
             await self._future
         return self._future.result()
 
