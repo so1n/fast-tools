@@ -38,11 +38,7 @@ app.add_middleware(ContextMiddleware, context_model=ContextModel())
 async def root():
     assert ContextModel.http_client == client
     return {
-        "message": {
-            key: value
-            for key, value in ContextModel.to_dict().items()
-            if not key.startswith('custom')  # CustomQuery key name custom:****
-        }
+        "message": ContextModel.to_dict(is_safe_return=True)  # not return CustomQuery
     }
 
 

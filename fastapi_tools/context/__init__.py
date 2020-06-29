@@ -81,8 +81,15 @@ class ContextBaseModel(object):
         return _fastapi_tools_context.set(self._cache_dict)
 
     @staticmethod
-    def to_dict() -> Dict[str, Any]:
-        return _fastapi_tools_context.get()
+    def to_dict(is_safe_return: bool = False) -> Dict[str, Any]:
+        context_dict: Dict[str, Any] = _fastapi_tools_context.get()
+        if context_dict and is_safe_return:
+            return {
+                key: value
+                for key, value in context_dict.items()
+                if not key.startswith('custom')  # CustomQuery key name custom:****
+            }
+        return context_dict
 
 
 class ContextMiddleware(BaseHTTPMiddleware):
