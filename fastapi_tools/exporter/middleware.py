@@ -20,11 +20,11 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
     ) -> None:
         super().__init__(app)
         self._app_name: str = app_name
-        self._url_dict: Dict[str, List[str, Set]] = {}
+        self._url_dict: Dict[str,  Set] = {}
         self._is_filter_url_path: bool = is_filter_url_path
         self._block_url_set: set = block_url_set
-
-        self._register_url()
+        if self._is_filter_url_path:
+            self._register_url()
 
         self.request_count: 'Counter' = Counter(
             f"{prefix}_requests_total",
@@ -69,10 +69,10 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             if self._block_url_set and url in self._block_url_set:
                 continue
             if url not in self._url_dict:
-                self._url_dict[url] = [url, route.methods]
+                self._url_dict[url] = route.methods
             else:
                 # support cbv
-                self._url_dict[url][1].update(route.methods)
+                self._url_dict[url].update(route.methods)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         method: str = request.method
@@ -92,7 +92,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             status_code = response.status_code
             request_result = 1
         except Exception as e:
-            self.exception_count.labels(*label_list, type(e).__name__, ).inc()
+            self.exception_count.labels(*label_list, type(e).__name__).inc()
             raise e
         finally:
             self.request_time.labels(*label_list, request_result).observe(time.time() - start_time)
