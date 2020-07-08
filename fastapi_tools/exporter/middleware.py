@@ -1,5 +1,5 @@
 import time
-from typing import Dict, List, Optional, Set
+from typing import Dict, Optional, Set
 
 from prometheus_client import Counter, Gauge, Histogram
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -7,6 +7,8 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
+
+from .url_trie import UrlTrie
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
@@ -21,6 +23,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._app_name: str = app_name
         self._url_dict: Dict[str,  Set] = {}
+        self._url_trie: UrlTrie = UrlTrie()
         self._is_filter_url_path: bool = is_filter_url_path
         self._block_url_set: set = block_url_set
         if self._is_filter_url_path:
@@ -53,11 +56,6 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         )
 
     def _register_url(self):
-        # TODO support query parameters
-        # This type of url is currently not statistics
-        # If match this type of url, it may reduce performance
-        # if it does not match, it will generate a lot of metrics
-        # example handle :https://fastapi.tiangolo.com/tutorial/query-params/#multiple-path-and-query-parameters
         new_app = self.app
         while True:
             if hasattr(new_app, 'app'):
@@ -68,17 +66,16 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             url: str = route.path
             if self._block_url_set and url in self._block_url_set:
                 continue
-            if url not in self._url_dict:
-                self._url_dict[url] = route.methods
-            else:
-                # support cbv
-                self._url_dict[url].update(route.methods)
+            self._url_trie.insert(url, route)
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         method: str = request.method
         url_path: str = request.url.path
-        if self._is_filter_url_path and url_path not in self._url_dict:
-            return await call_next(request)
+
+        if self._is_filter_url_path:
+            is_in_route, url_path = self._url_trie.search(url_path, request.scope)
+            if not is_in_route:
+                return await call_next(request)
 
         label_list: list = [self._app_name, method, url_path]
         self.request_in_progress.labels(*label_list).inc()
