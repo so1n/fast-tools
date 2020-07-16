@@ -1,5 +1,5 @@
 import time
-from typing import Dict, Optional, Set
+from typing import Optional, Set
 
 from prometheus_client import Counter, Gauge, Histogram
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -22,10 +22,9 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
     ) -> None:
         super().__init__(app)
         self._app_name: str = app_name
-        self._url_dict: Dict[str,  Set] = {}
         self._url_trie: UrlTrie = UrlTrie()
         self._is_filter_url_path: bool = is_filter_url_path
-        self._block_url_set: set = block_url_set
+        self._block_url_set: set = block_url_set if block_url_set else set()
         if self._is_filter_url_path:
             self._register_url()
 
@@ -64,7 +63,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
                 break
         for route in new_app.routes:
             url: str = route.path
-            if self._block_url_set and url in self._block_url_set:
+            if url in self._block_url_set:
                 continue
             self._url_trie.insert(url, route)
 
