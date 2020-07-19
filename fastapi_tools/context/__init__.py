@@ -104,6 +104,6 @@ class ContextMiddleware(BaseHTTPMiddleware):
         context_token: Token = self.context_model.set_context(request)
         try:
             response = await call_next(request)
+            return response
         finally:
             _fastapi_tools_context.reset(context_token)
-        return response
