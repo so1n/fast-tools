@@ -51,7 +51,7 @@ async def user_login():
 
 
 # Note: The insert_by_app must be called after the all route added
-route_trie.insert_by_app(app, {"/metrics"})
+route_trie.insert_by_app(app)
 
 
 if __name__ == '__main__':
