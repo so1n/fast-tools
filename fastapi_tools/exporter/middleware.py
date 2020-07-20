@@ -1,5 +1,5 @@
 import time
-from typing import Optional, Set
+from typing import Optional
 
 from prometheus_client import Counter, Gauge, Histogram
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -8,25 +8,20 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
-from .url_trie import UrlTrie
+from fastapi_tools.route_trie import RouteTrie
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
     def __init__(
             self,
             app: ASGIApp,
-            is_filter_url_path: bool = True,
             app_name: str = 'fastapi_tools',
             prefix: str = 'fastapi_tools',
-            block_url_set: Optional[Set[str]] = None
+            route_trie: Optional['RouteTrie'] = None
     ) -> None:
         super().__init__(app)
         self._app_name: str = app_name
-        self._url_trie: UrlTrie = UrlTrie()
-        self._is_filter_url_path: bool = is_filter_url_path
-        self._block_url_set: set = block_url_set if block_url_set else set()
-        if self._is_filter_url_path:
-            self._register_url()
+        self._route_trie: Optional[RouteTrie] = route_trie
 
         self.request_count: 'Counter' = Counter(
             f"{prefix}_requests_total",
@@ -54,27 +49,16 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             ["app_name", "method", "url_path"],
         )
 
-    def _register_url(self):
-        new_app = self.app
-        while True:
-            if hasattr(new_app, 'app'):
-                new_app = new_app.app
-            else:
-                break
-        for route in new_app.routes:
-            url: str = route.path
-            if url in self._block_url_set:
-                continue
-            self._url_trie.insert(url, route)
-
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         method: str = request.method
         url_path: str = request.url.path
 
-        if self._is_filter_url_path:
-            is_in_route, url_path = self._url_trie.search(url_path, request.scope)
-            if not is_in_route:
+        if self._route_trie:
+            route = self._route_trie.search(url_path, request.scope)
+            if not route:
                 return await call_next(request)
+            else:
+                url_path = route.path
 
         label_list: list = [self._app_name, method, url_path]
         self.request_in_progress.labels(*label_list).inc()

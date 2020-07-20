@@ -1,19 +1,9 @@
 from typing import Optional
 
 from fastapi import FastAPI
-from fastapi_tools.exporter import PrometheusMiddleware, get_metrics
 from fastapi_tools.route_trie import RouteTrie
 
-
 app = FastAPI()
-route_trie = RouteTrie()
-
-app.add_middleware(
-    PrometheusMiddleware,
-    route_trie=route_trie
-)
-
-app.add_route("/metrics", get_metrics)
 
 
 @app.get("/")
@@ -43,10 +33,17 @@ async def user_login():
     return 'ok'
 
 
-# Note: The insert_by_app must be called after the all route added
-route_trie.insert_by_app(app, {"/metrics"})
+route_trie: RouteTrie = RouteTrie()
+route_trie.insert_by_app(app, block_url_set={'/'})
 
 
-if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run(app)
+def print_route(route):
+    if route:
+        print(f'route:{route} url:{route.path}')
+    else:
+        print(f'route:{route} url: not found')
+
+
+# regex url should use scope param, can learn more in exporter example
+print_route(route_trie.search('/'))
+print_route(route_trie.search('/api/users/login'))

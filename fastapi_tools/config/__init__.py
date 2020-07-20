@@ -5,6 +5,9 @@ from collections.abc import MutableMapping
 from typing import Any, NoReturn, Union
 
 
+__all__ = ['Config']
+
+
 class EnvironError(Exception):
     pass
 
