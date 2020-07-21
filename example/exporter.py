@@ -10,7 +10,8 @@ route_trie = RouteTrie()
 
 app.add_middleware(
     PrometheusMiddleware,
-    route_trie=route_trie
+    route_trie=route_trie,
+    block_url_set="/metrics"
 )
 
 app.add_route("/metrics", get_metrics)
@@ -44,7 +45,7 @@ async def user_login():
 
 
 # Note: The insert_by_app must be called after the all route added
-route_trie.insert_by_app(app, {"/metrics"})
+route_trie.insert_by_app(app)
 
 
 if __name__ == '__main__':

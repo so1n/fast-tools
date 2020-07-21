@@ -25,11 +25,9 @@ class RouteTrie:
         self.root_node: 'RouteNode' = RouteNode()
 
         self.root: Dict[str, Union['RouteTrie', dict, Route, List[Route]]] = {}
-        self.route_flag: str = 'UrlTrie:route_flag'
-        self.regex_flag: str = 'UrlTrie:regex_flag'
         self.route_dict: Dict['RouteTrie', List[Route]] = {}
 
-    def insert_by_app(self, app: ASGIApp, block_url_set: Optional[Set[str]] = None):
+    def insert_by_app(self, app: ASGIApp):
         new_app = app
         while True:
             if hasattr(new_app, 'app'):
@@ -38,8 +36,6 @@ class RouteTrie:
                 break
         for route in new_app.routes:
             url: str = route.path
-            if url in block_url_set:
-                continue
             self.insert(url, route)
 
     def insert(self, url_path: str, route: Route):

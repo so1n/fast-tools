@@ -34,7 +34,7 @@ async def user_login():
 
 
 route_trie: RouteTrie = RouteTrie()
-route_trie.insert_by_app(app, block_url_set={'/'})
+route_trie.insert_by_app(app)
 
 
 def print_route(route):

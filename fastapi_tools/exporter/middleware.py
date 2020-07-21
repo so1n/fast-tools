@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Optional, Set
 
 from prometheus_client import Counter, Gauge, Histogram
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -17,10 +17,12 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             app: ASGIApp,
             app_name: str = 'fastapi_tools',
             prefix: str = 'fastapi_tools',
-            route_trie: Optional['RouteTrie'] = None
+            route_trie: Optional['RouteTrie'] = None,
+            block_url_set: Optional[Set[str]] = None
     ) -> None:
         super().__init__(app)
         self._app_name: str = app_name
+        self._block_url_set = block_url_set
         self._route_trie: Optional[RouteTrie] = route_trie
 
         self.request_count: 'Counter' = Counter(
@@ -59,6 +61,9 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
                 return await call_next(request)
             else:
                 url_path = route.path
+
+        if url_path in self._block_url_set:
+            return await call_next(request)
 
         label_list: list = [self._app_name, method, url_path]
         self.request_in_progress.labels(*label_list).inc()

@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, Set
 
 from aio_statsd import StatsdClient
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -21,8 +21,10 @@ class StatsdMiddleware(BaseHTTPMiddleware):
             prefix: str = 'fastapi_tools',
             route_trie: Optional['RouteTrie'] = None,
             url_replace_handle: Optional[Callable] = None,
+            block_url_set: Optional[Set[str]] = None
     ) -> None:
         super().__init__(app)
+        self._block_url_set = block_url_set
         self._client: StatsdClient = client
         self._route_trie: Optional[RouteTrie] = route_trie
         self._metric = ''
@@ -42,6 +44,8 @@ class StatsdMiddleware(BaseHTTPMiddleware):
                 return await call_next(request)
             else:
                 url_path = route.path
+        if url_path in self._block_url_set:
+            return await call_next(request)
         if self._url_replace_handle:
             url_path = self._url_replace_handle(url_path)
         metric: str = f'{self._metric}{method}.{url_path}.'
