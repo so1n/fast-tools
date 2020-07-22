@@ -102,7 +102,10 @@ class Config:
         value = ast.literal_eval(value)
         if type(value) == key_type:
             return value
-        return TypeError(f"Value type:{type(value)} is not {key_type}")
+        try:
+            return key_type(value)
+        except Exception:
+            raise TypeError(f"Value type:{type(value)} is not {key_type}")
 
     def _read_environ(self, _environ: typing.Mapping[str, str]) -> NoReturn:
         for key in self.__annotations__.keys():
