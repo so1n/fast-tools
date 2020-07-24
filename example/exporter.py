@@ -17,6 +17,11 @@ app.add_middleware(
 app.add_route("/metrics", get_metrics)
 
 
+@app.on_event("startup")
+async def startup_event():
+    route_trie.insert_by_app(app)
+
+
 @app.get("/")
 async def root():
     return {"Hello": "World"}
@@ -42,10 +47,6 @@ async def read_user_item(
 @app.get("/api/users/login")
 async def user_login():
     return 'ok'
-
-
-# Note: The insert_by_app must be called after the all route added
-route_trie.insert_by_app(app)
 
 
 if __name__ == '__main__':
