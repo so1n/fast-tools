@@ -56,7 +56,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         url_path: str = request.url.path
 
         if self._route_trie:
-            route = self._route_trie.search(url_path, request.scope)
+            route = self._route_trie.search_by_scope(url_path, request.scope)
             if not route:
                 return await call_next(request)
             else:
