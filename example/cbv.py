@@ -3,13 +3,14 @@
 __author__ = 'so1n'
 __date__ = '2020-08'
 from fastapi import FastAPI, Header
-from fastapi_tools.cbv import Cbv
+from fastapi_tools.cbv import cbv_decorator, Cbv
 
 app = FastAPI()
 
 
 class TestCbv(Cbv):
 
+    @cbv_decorator(status_code=203)
     def get(self, user_agent: str = Header("User_Agent")):
         return {"message": "hello, world", "user_agent": user_agent}
 
