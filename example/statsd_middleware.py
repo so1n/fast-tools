@@ -14,7 +14,7 @@ app.add_middleware(
     client=client,
     route_trie=route_trie,
     url_replace_handle=lambda url: url.replace('/', '_'),
-    block_url_set="/"
+    block_url_set={"/"}
 )
 app.on_event("shutdown")(client.close)
 

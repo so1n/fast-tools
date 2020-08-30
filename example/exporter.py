@@ -11,7 +11,7 @@ route_trie = RouteTrie()
 app.add_middleware(
     PrometheusMiddleware,
     route_trie=route_trie,
-    block_url_set="/metrics"
+    block_url_set={"/metrics"}
 )
 
 app.add_route("/metrics", get_metrics)
