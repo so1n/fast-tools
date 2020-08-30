@@ -1,3 +1,5 @@
+import inspect
+
 from typing import (
     Any,
     Callable,
@@ -7,12 +9,22 @@ from typing import (
     Set,
     Sequence,
     Type,
-    Union
+    Union,
+    get_type_hints
 )
 
-from fastapi import APIRouter, Response, params
-from fastapi.encoders import (DictIntStrAny, SetIntStr)
+from fastapi import (
+    APIRouter,
+    Response,
+    params,
+    Depends
+)
+from fastapi.encoders import (
+    DictIntStrAny,
+    SetIntStr
+)
 from fastapi.routing import APIRoute
+from pydantic.typing import is_classvar
 
 
 __all__ = ['Cbv', 'cbv_decorator']
@@ -85,18 +97,79 @@ def cbv_decorator(
 
 class Cbv(object):
 
-    def __init__(self, url: str = '/'):
-        self._url = url
+    def __init__(self, obj,  url: str = '/'):
+        self._url: str = url
         self.router: APIRouter = APIRouter()
+        self._obj = obj
 
+        self._init_obj()
         self._add_router()
 
     def _add_router(self):
-        for _dir in self.__dir__():
-            if _dir in METHOD_SET:
-                cbv_method = getattr(self, _dir)
-                if isinstance(cbv_method, CbvModel):
-                    cbv_method.kwargs['methods'] = [_dir.upper()]
-                    self.router.add_api_route(self._url, cbv_method.func, **cbv_method.kwargs)
-                else:
-                    self.router.add_api_route(self._url, cbv_method, methods=[_dir.upper()])
+        for _dir in dir(self._obj):
+            if _dir not in METHOD_SET:
+                continue
+
+            cbv_method = getattr(self._obj, _dir)
+            if isinstance(cbv_method, CbvModel):
+                cbv_method.kwargs['methods'] = [_dir.upper()]
+                kwargs = cbv_method.kwargs
+                func = cbv_method.func
+            else:
+                kwargs = {'methods': [_dir.upper()]}
+                func = cbv_method
+
+            name = kwargs.get('name', None)
+            attributes = f'{self._obj.__name__}.{func.__name__}'
+
+            if name is None:
+                name = attributes
+            else:
+                name = name + f'({attributes})'
+            kwargs['name'] = name
+
+            self.router.add_api_route(self._url, self._init_cbv(func), **kwargs)
+
+    def _init_cbv(self, func):
+        """fork from https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py#L89
+        """
+        old_signature = inspect.signature(func)
+        old_parameters: List[inspect.Parameter] = list(old_signature.parameters.values())
+        self_param = old_parameters[0]
+        new_self_param = self_param.replace(default=Depends(self._obj))
+        new_parameters = [new_self_param] + [
+            parameter.replace(kind=inspect.Parameter.KEYWORD_ONLY) for parameter in old_parameters[1:]
+        ]
+        new_signature = old_signature.replace(parameters=new_parameters)
+        setattr(func, "__signature__", new_signature)
+        return func
+
+    def _init_obj(self) -> None:
+        """fork from https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py#L53
+        """
+        cls = self._obj
+        old_init: Callable[..., Any] = cls.__init__
+        old_signature = inspect.signature(old_init)
+        old_parameters = list(old_signature.parameters.values())[1:]  # drop `self` parameter
+        new_parameters = [
+            x for x in old_parameters if x.kind not in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD)
+        ]
+        dependency_names: List[str] = []
+        for name, hint in get_type_hints(cls).items():
+            if is_classvar(hint):
+                continue
+            parameter_kwargs = {"default": getattr(cls, name, Ellipsis)}
+            dependency_names.append(name)
+            new_parameters.append(
+                inspect.Parameter(name=name, kind=inspect.Parameter.KEYWORD_ONLY, annotation=hint, **parameter_kwargs)
+            )
+        new_signature = old_signature.replace(parameters=new_parameters)
+        setattr(cls, "__signature__", new_signature)
+
+        def new_init(_self: Any, *args: Any, **kwargs: Any) -> None:
+            for dep_name in dependency_names:
+                dep_value = kwargs.pop(dep_name)
+                setattr(_self, dep_name, dep_value)
+            old_init(_self, *args, **kwargs)
+
+        setattr(cls, "__init__", new_init)
