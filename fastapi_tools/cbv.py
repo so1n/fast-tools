@@ -29,12 +29,7 @@ from pydantic.typing import is_classvar
 
 __all__ = ['Cbv', 'cbv_decorator']
 METHOD_SET: Set[str] = {'get', 'post', 'head', 'options', 'put', 'patch', 'delete'}
-
-
-class CbvModel(object):
-    def __init__(self, func: Callable, kwargs: Dict):
-        self.func = func
-        self.kwargs = kwargs
+ROUTE_ATTRIBUTES_DICT: Dict[str, Any] = {}
 
 
 def cbv_decorator(
@@ -91,7 +86,9 @@ def cbv_decorator(
     }
 
     def wrapper(func: Callable):
-        return CbvModel(func, kwargs)
+        ROUTE_ATTRIBUTES_DICT[func.__qualname__] = kwargs
+        return func
+
     return wrapper
 
 
@@ -110,18 +107,16 @@ class Cbv(object):
             if _dir not in METHOD_SET:
                 continue
 
-            cbv_method = getattr(self._obj, _dir)
-            if isinstance(cbv_method, CbvModel):
-                cbv_method.kwargs['methods'] = [_dir.upper()]
-                kwargs = cbv_method.kwargs
-                func = cbv_method.func
+            func = getattr(self._obj, _dir)
+            func_attributes = ROUTE_ATTRIBUTES_DICT.get(func.__qualname__, None)
+            if func_attributes is not None:
+                func_attributes['methods'] = [_dir.upper()]
+                kwargs = func_attributes
             else:
                 kwargs = {'methods': [_dir.upper()]}
-                func = cbv_method
 
-            name = kwargs.get('name', None)
             attributes = f'{self._obj.__name__}.{func.__name__}'
-
+            name: Optional[str] = kwargs.get('name', None)
             if name is None:
                 name = attributes
             else:
