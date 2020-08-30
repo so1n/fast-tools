@@ -29,7 +29,7 @@ from pydantic.typing import is_classvar
 
 __all__ = ['Cbv', 'cbv_decorator']
 METHOD_SET: Set[str] = {'get', 'post', 'head', 'options', 'put', 'patch', 'delete'}
-ROUTE_ATTRIBUTES_DICT: Dict[str, Any] = {}
+ROUTE_ATTRIBUTES_DICT: Dict[str, Dict[str, Any]] = {}
 
 
 def cbv_decorator(
@@ -56,10 +56,10 @@ def cbv_decorator(
     name: str = None,
     route_class_override: Optional[Type[APIRoute]] = None,
     callbacks: List[APIRoute] = None,
-):
+) -> Callable:
     if response_model_exclude is None:
         response_model_exclude = set()
-    kwargs = {
+    kwargs: Dict[str, Any] = {
         'response_model': response_model,
         'status_code': status_code,
         'tags': tags,
@@ -85,10 +85,9 @@ def cbv_decorator(
         'callbacks': callbacks,
     }
 
-    def wrapper(func: Callable):
+    def wrapper(func: Callable) -> Callable:
         ROUTE_ATTRIBUTES_DICT[func.__qualname__] = kwargs
         return func
-
     return wrapper
 
 
@@ -97,7 +96,7 @@ class Cbv(object):
     def __init__(self, obj,  url: str = '/'):
         self._url: str = url
         self.router: APIRouter = APIRouter()
-        self._obj = obj
+        self._obj: Type = obj
 
         self._init_obj()
         self._add_router()
@@ -107,15 +106,15 @@ class Cbv(object):
             if _dir not in METHOD_SET:
                 continue
 
-            func = getattr(self._obj, _dir)
-            func_attributes = ROUTE_ATTRIBUTES_DICT.get(func.__qualname__, None)
+            func: Callable = getattr(self._obj, _dir)
+            func_attributes: Dict[str, Any] = ROUTE_ATTRIBUTES_DICT.get(func.__qualname__, None)
             if func_attributes is not None:
                 func_attributes['methods'] = [_dir.upper()]
-                kwargs = func_attributes
+                kwargs: Dict[str, Any] = func_attributes
             else:
-                kwargs = {'methods': [_dir.upper()]}
+                kwargs: Dict[str, Any] = {'methods': [_dir.upper()]}
 
-            attributes = f'{self._obj.__name__}.{func.__name__}'
+            attributes: str = f'{self._obj.__name__}.{func.__name__}'
             name: Optional[str] = kwargs.get('name', None)
             if name is None:
                 name = attributes
@@ -125,7 +124,7 @@ class Cbv(object):
 
             self.router.add_api_route(self._url, self._init_cbv(func), **kwargs)
 
-    def _init_cbv(self, func):
+    def _init_cbv(self, func: Callable) -> Callable:
         """fork from https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py#L89
         """
         old_signature = inspect.signature(func)
