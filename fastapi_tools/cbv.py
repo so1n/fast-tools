@@ -109,10 +109,10 @@ class Cbv(object):
             func: Callable = getattr(self._obj, _dir)
             func_attributes: Dict[str, Any] = ROUTE_ATTRIBUTES_DICT.get(func.__qualname__, None)
             if func_attributes is not None:
-                func_attributes['methods'] = [_dir.upper()]
                 kwargs: Dict[str, Any] = func_attributes
             else:
-                kwargs: Dict[str, Any] = {'methods': [_dir.upper()]}
+                kwargs: Dict[str, Any] = {}
+            kwargs['methods'] = [_dir.upper()]
 
             attributes: str = f'{self._obj.__name__}.{func.__name__}'
             name: Optional[str] = kwargs.get('name', None)
