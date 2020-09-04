@@ -16,15 +16,18 @@ class TestCbv(object):
     host: str = Header('host')
     user_agent: str = Depends(get_user_agent)
 
-    def __init__(self, uid: int = Query(123)):
-        self.uid = uid
+    def __init__(self, test_default_id: int = Query(123)):
+        self.test_default_id = test_default_id
+
+    def _response(self):
+        return {"message": "hello, world", "user_agent": self.user_agent, "host": self.host, "id": self.test_default_id}
 
     @cbv_decorator(status_code=203)
     def get(self):
-        return {"message": "hello, world", "user_agent": self.user_agent, "host": self.host}
+        return self._response()
 
     def post(self):
-        return {"message": "hello, world", "user_agent": self.user_agent, "host": self.host}
+        return self._response()
 
 
 app.include_router(Cbv(TestCbv).router)
