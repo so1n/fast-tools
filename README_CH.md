@@ -161,6 +161,8 @@ print_route(route_trie.search('/api/users/login'))
 ```
 ## 6.statsd_middleware
 使用方法类似于exporter, 不过多了个`url_replace_handle`来处理url
+### 6.1安装
+pip install aiostatsd
 ```python
 from typing import Optional
 
