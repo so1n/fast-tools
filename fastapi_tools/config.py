@@ -1,9 +1,8 @@
+import ast
 import os
 import typing
 from collections.abc import MutableMapping
-from typing import NoReturn, Type, Optional
-
-from pydantic import BaseModel
+from typing import Any, NoReturn, Union
 
 
 __all__ = ['Config']
@@ -51,28 +50,69 @@ environ = Environ()
 
 class Config:
     def __init__(
-        self,
-        model: Type[BaseModel],
-        file: Optional[str] = None,
-        is_load_environ: bool = False,
+        self, env_file: str = None,
+        _environ: typing.Mapping[str, str] = environ
     ) -> None:
-        self._model: 'Optional[BaseModel]' = None
-        self._dict = {}
-        if is_load_environ:
-            self._read_environ(environ)
-        if file is not None and os.path.isfile(file):
-            self._read_file(file)
+        self._init_default_value()
+        self._read_environ(_environ)
+        if env_file is not None and os.path.isfile(env_file):
+            self._read_file(env_file)
+        self._check_not_set_value()
 
-        self._load_model(model)
+    def _init_default_value(self):
+        for key in self.__annotations__:
+            if hasattr(self, key):
+                self.__dict__[key] = getattr(self, key)
 
-    def _load_model(self, model: Type[BaseModel]):
-        self._model = model(**self._dict)
+    def _check_not_set_value(self):
+        for key in self.__annotations__:
+            if not hasattr(self, key):
+                raise ValueError(f'{self.__class__.__name__}.{key} not set value')
+
+    def __setattr__(self, key: str, value: Any) -> NoReturn:
+        if key not in self.__annotations__:
+            raise AttributeError(
+                "{} not found attr:{}".format(self.__class__.__name__, key)
+            )
+        # Now support typing.Optional, typing.Union and python base type
+        key_type = self.__annotations__[key]
+        if hasattr(key_type, '__origin__') and key_type.__origin__ is Union:
+            # get typing.type from Union
+            key_type = key_type.__args__
+
+        if not isinstance(value, key_type):
+            try:
+                if isinstance(key_type, tuple):
+                    for i in key_type:
+                        try:
+                            value = self._python_type_conversion(i, value)
+                            break
+                        except TypeError:
+                            value = None
+                    else:
+                        raise TypeError
+                else:
+                    value = self._python_type_conversion(key_type, value)
+            except Exception:
+                raise TypeError(f"The type of {key} should be {key_type}")
+        self.__dict__[key] = value
+
+    @staticmethod
+    def _python_type_conversion(key_type, value: str):
+        value = ast.literal_eval(value)
+        if type(value) == key_type:
+            return value
+        try:
+            return key_type(value)
+        except Exception:
+            raise TypeError(f"Value type:{type(value)} is not {key_type}")
 
     def _read_environ(self, _environ: typing.Mapping[str, str]) -> NoReturn:
-        self._dict.update(dict(_environ))
+        for key in self.__annotations__.keys():
+            if key in _environ:
+                setattr(self, key, _environ[key])
 
     def _read_file(self, file_name: str) -> NoReturn:
-        file_dict: dict = {}
         with open(file_name) as input_file:
             for line in input_file.readlines():
                 line = line.strip()
@@ -80,8 +120,12 @@ class Config:
                     key, value = line.split("=", 1)
                     key = key.strip()
                     value = value.strip().strip("\"'")
-                    file_dict[key] = value
-        self._dict.update(file_dict)
+                    setattr(self, key, value)
 
     def __str__(self):
-        return self._model.json()
+        return str(
+            [
+                {'name': key, 'value': self.__dict__[key], 'type': type(self.__dict__[key])}
+                for key in self.__dict__.keys()
+            ]
+        )
