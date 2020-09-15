@@ -2,7 +2,12 @@ import ast
 import os
 import typing
 from collections.abc import MutableMapping
-from typing import Any, NoReturn, Union
+from typing import Any, Dict, NoReturn, Union, Type
+
+from pydantic import (
+    BaseModel,
+    create_model
+)
 
 
 __all__ = ['Config']
@@ -57,7 +62,17 @@ class Config:
         self._read_environ(_environ)
         if env_file is not None and os.path.isfile(env_file):
             self._read_file(env_file)
-        self._check_not_set_value()
+        pydantic_obj = self._init_pydantic_obj()
+        self.__dict__.update(pydantic_obj(**self.__dict__).dict())
+        # self._check_not_set_value()
+
+    def _init_pydantic_obj(self) -> Type[BaseModel]:
+        annotation_dict: Dict[str, Type[Any, ...]] = {}
+        for key in self.__annotations__:
+            if hasattr(self, key):
+                annotation_dict[key] = (self.__annotations__[key], ...)
+        dynamic_model: Type[BaseModel] = create_model('DynamicFoobarModel', **annotation_dict)
+        return dynamic_model
 
     def _init_default_value(self):
         for key in self.__annotations__:

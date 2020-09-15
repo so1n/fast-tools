@@ -1,7 +1,7 @@
 """
 run output:
 [
-    {'name': 'REDIS_PASS', 'value': None, 'type': <class 'NoneType'>}
+    {'name': 'REDIS_PASS', 'value': None, 'type': <class 'NoneType'>},
     {'name': 'DEBUG', 'value': True, 'type': <class 'bool'>},
     {'name': 'PORT', 'value': 8000, 'type': <class 'int'>},
     {'name': 'HOST', 'value': '127.0.0.1', 'type': <class 'str'>},
