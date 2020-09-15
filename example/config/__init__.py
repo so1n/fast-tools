@@ -13,23 +13,26 @@ run output:
     {'name': 'ES_HOST', 'value': ['127.0.0.1:9200', '127.0.0.2:9200'], 'type': <class 'list'>}
 ]
 """
-from typing import Optional
+from typing import List, Optional
 from fastapi_tools.config import Config
+
+from pydantic.fields import Json
 
 
 class MyConfig(Config):
     DEBUG: bool
-    HOST: Optional[str]
-    PORT: Optional[int]
+    HOST: str
+    PORT: int
 
-    REDIS_ADDRESS: Optional[str]
+    REDIS_ADDRESS: str
     REDIS_PASS: Optional[str] = None
 
-    MYSQL_DB_HOST: Optional[str]
-    MYSQL_DB_NAME: Optional[str]
-    MYSQL_DB_PASS: Optional[str]
-    MYSQL_DB_USER: Optional[str]
-    ES_HOST: Optional[list]
+    MYSQL_DB_HOST: str
+    MYSQL_DB_NAME: str
+    MYSQL_DB_PASS: str
+    MYSQL_DB_USER: str
+    ES_HOST: Json[List]
+    TEST_LIST_INT: Json[List]
 
 
 config = MyConfig('./example_config.conf')
