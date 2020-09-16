@@ -57,20 +57,23 @@ class Config:
         self, config_file: Optional[str] = None, _environ: typing.Mapping[str, str] = environ
     ) -> None:
         self._config_dict: Dict[str, Any] = {}
-        self._config_dict.update(_environ)
+        self._environ = _environ
         if config_file is not None and os.path.isfile(config_file):
             self._read_file(config_file)
-        self._init_pydantic_obj()
+        self._init_obj()
 
-    def _init_pydantic_obj(self):
+    def _init_obj(self):
         annotation_dict: Dict[str, Type[Any, ...]] = {}
+
         for key in self.__annotations__:
             if key not in self._config_dict:
-                default_value = getattr(self, key, Config)
-                if default_value != Config:
-                    # set default value
-                    self._config_dict[key] = default_value
-                annotation_dict[key] = (self.__annotations__[key], ...)
+                if key in self._environ:
+                    default_value = self._environ[key]
+                else:
+                    default_value = getattr(self, key, ...)
+                self._config_dict[key] = default_value
+
+            annotation_dict[key] = (self.__annotations__[key], ...)
         dynamic_model: Type[BaseModel] = create_model('DynamicFoobarModel', **annotation_dict)
         self.__dict__.update(dynamic_model(**self._config_dict).dict())
 
@@ -87,7 +90,7 @@ class Config:
     def __str__(self):
         return str(
             [
-                {'name': key, 'value': self._config_dict[key], 'type': type(self._config_dict[key])}
+                {'name': key, 'value': self.__dict__[key], 'type': str(type(self.__dict__[key]))}
                 for key in self._config_dict.keys()
             ]
         )
