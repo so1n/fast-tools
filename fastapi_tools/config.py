@@ -1,7 +1,7 @@
 import os
 import typing
 from collections.abc import MutableMapping
-from typing import Any, Dict, NoReturn, Type
+from typing import Any, Dict, NoReturn, Optional, Type
 
 from pydantic import (
     BaseModel,
@@ -54,28 +54,25 @@ environ = Environ()
 
 class Config:
     def __init__(
-        self, env_file: str = None,
-        _environ: typing.Mapping[str, str] = environ
+        self, config_file: Optional[str] = None, _environ: typing.Mapping[str, str] = environ
     ) -> None:
-        self._read_environ(_environ)
-        if env_file is not None and os.path.isfile(env_file):
-            self._read_file(env_file)
-        pydantic_obj = self._init_pydantic_obj()
-        self.__dict__.update(pydantic_obj(**self.__dict__).dict())
+        self._config_dict: Dict[str, Any] = {}
+        self._config_dict.update(_environ)
+        if config_file is not None and os.path.isfile(config_file):
+            self._read_file(config_file)
+        self._init_pydantic_obj()
 
-    def _init_pydantic_obj(self) -> Type[BaseModel]:
+    def _init_pydantic_obj(self):
         annotation_dict: Dict[str, Type[Any, ...]] = {}
         for key in self.__annotations__:
-            if hasattr(self, key):
-                self.__dict__[key] = getattr(self, key)
+            if key not in self._config_dict:
+                default_value = getattr(self, key, Config)
+                if default_value != Config:
+                    # set default value
+                    self._config_dict[key] = default_value
                 annotation_dict[key] = (self.__annotations__[key], ...)
         dynamic_model: Type[BaseModel] = create_model('DynamicFoobarModel', **annotation_dict)
-        return dynamic_model
-
-    def _read_environ(self, _environ: typing.Mapping[str, str]) -> NoReturn:
-        for key in self.__annotations__.keys():
-            if key in _environ:
-                setattr(self, key, _environ[key])
+        self.__dict__.update(dynamic_model(**self._config_dict).dict())
 
     def _read_file(self, file_name: str) -> NoReturn:
         with open(file_name) as input_file:
@@ -85,12 +82,12 @@ class Config:
                     key, value = line.split("=", 1)
                     key = key.strip()
                     value = value.strip().strip("\"'")
-                    setattr(self, key, value)
+                    self._config_dict[key] = value
 
     def __str__(self):
         return str(
             [
-                {'name': key, 'value': self.__dict__[key], 'type': type(self.__dict__[key])}
-                for key in self.__dict__.keys()
+                {'name': key, 'value': self._config_dict[key], 'type': type(self._config_dict[key])}
+                for key in self._config_dict.keys()
             ]
         )
