@@ -73,6 +73,37 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 3.config
+config提供一个从文件转换为python对象的配置. 基于`Pydantic`和Type Hints, config可以在不需要使用大量的代码量下实现快速转换或检验参数.
+```python
+from typing import List, Optional
+from fastapi_tools.config import Config
+
+from pydantic.fields import Json
+
+
+class MyConfig(Config):
+    DEBUG: bool
+    HOST: str
+    PORT: int
+
+    REDIS_ADDRESS: str
+    REDIS_PASS: Optional[str] = None  # 设置默认值,如果配置文件没有该值且不设置默认值,则会报错
+
+    MYSQL_DB_HOST: str
+    MYSQL_DB_NAME: str
+    MYSQL_DB_PASS: str
+    MYSQL_DB_USER: str
+    ES_HOST: Json[List]
+    TEST_LIST_INT: Json[List]
+    YML_ES_HOST: Optional[List[str]] = None
+    YML_TEST_LIST_INT: Optional[List[int]] = None
+
+```
+config支持如下参数:
+    - config_file: 配置文件,支持ini和yml文件,如果没填写则从环境变量中拉取数据(不过只拉取了一个全局字典)
+    - group: group可以指定一个配置分组.在使用ini和yml文件时,支持多个分组配置,如dev配置和test配置.如果你不想在代码中配置该选项,可以直接在环境变量中配置group=test
+    - global_key: 指定那个分组为全局配置.在使用ini和yml文件时, 支持多个分组配置,同时也有一个全局配置, 该配置可以被多个分组共享(如果该分组没有对应的配置,则会引用到global_key的配置,如果有则不引用)
+
 ## 4.context
 利用`contextvars`的特性,可以在路由中方便的调用自己需要的东西,而不需要像requests.app.state去调用,同时还可以支持type hints,方便写代码.
 ```python
@@ -123,7 +154,10 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 5.route_trie
-python的web框架都是使用遍历匹配去实现路由查找,如果在实现中间件时,还再匹配一次,那效率就很慢了,所以以前缀树重构了路由查找,可以在中间件中快速查找到路由
+python的web框架为了支持`/api/user/{user_id}`的写法都是先遍历路由,并逐一检查是否符合正则规则,符合条件才返回路由.
+不过我们的在web项目中url数量不多,平时很难发现这个路由匹配会降低响应速度.
+但在实现一些需要得知url的中间件时,还需要再匹配一次,那效率就很慢了.
+如果改为dict在进行路由匹配,虽然速度很快,但是却不支持上述所说的url,所以以前缀树重构了路由查找,可以尽快的匹配到路由的大致区域,再进行正则匹配,检查路由是否正确.
 ```Python
 from fastapi import FastAPI
 from fastapi_tools.route_trie import RouteTrie

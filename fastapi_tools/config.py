@@ -59,14 +59,13 @@ class Config:
         self,
         config_file: Optional[str] = None,
         group: Optional[str] = None,
-        global_key: Optional[str] = 'global',
-        _environ: typing.Mapping[str, str] = environ
+        global_key: Optional[str] = 'global'
     ) -> None:
         self._config_dict: Dict[str, Any] = {}
         if group:
             self._group = group
-        elif 'group' in _environ:
-            self._group = _environ['group']
+        elif 'group' in environ:
+            self._group = environ['group']
         else:
             raise RuntimeError('Miss param `group` in __init__ or env')
         self._global_key = global_key
@@ -74,7 +73,7 @@ class Config:
         if config_file is not None and os.path.isfile(config_file):
             self._read_file(config_file)
         else:
-            self._config_dict = {key: value for key, value in _environ.items()}
+            self._config_dict = {key: value for key, value in environ.items()}
         self._init_obj()
 
     def _init_obj(self):
