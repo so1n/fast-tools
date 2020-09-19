@@ -1,5 +1,6 @@
 import os
 import typing
+import yaml
 from collections.abc import MutableMapping
 from typing import Any, Dict, NoReturn, Optional, Type
 
@@ -74,18 +75,27 @@ class Config:
                 self._config_dict[key] = default_value
 
             annotation_dict[key] = (self.__annotations__[key], ...)
-        dynamic_model: Type[BaseModel] = create_model('DynamicFoobarModel', **annotation_dict)
+        dynamic_model: Type[BaseModel] = create_model('DynamicModel', **annotation_dict)
         self.__dict__.update(dynamic_model(**self._config_dict).dict())
 
     def _read_file(self, file_name: str) -> NoReturn:
         with open(file_name) as input_file:
-            for line in input_file.readlines():
-                line = line.strip()
-                if "=" in line and not line.startswith("#"):
-                    key, value = line.split("=", 1)
-                    key = key.strip()
-                    value = value.strip().strip("\"'")
-                    self._config_dict[key] = value
+            if file_name.endswith('conf'):
+                for line in input_file.readlines():
+                    line = line.strip()
+                    if "=" in line and not line.startswith("#"):
+                        key, value = line.split("=", 1)
+                        key = key.strip()
+                        value = value.strip().strip("\"'")
+                        self._config_dict[key] = value
+            elif file_name.endswith('.yml'):
+                self._config_dict = yaml.load(input_file, Loader=yaml.FullLoader)
+            else:
+                try:
+                    name, suffix = file_name.split('.')
+                except Exception:
+                    raise RuntimeError(f"Not support {file_name}")
+                raise RuntimeError(f'Not support {suffix}')
 
     def __str__(self):
         return str(

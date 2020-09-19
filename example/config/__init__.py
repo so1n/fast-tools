@@ -1,5 +1,5 @@
 """
-run output:
+example run output:
 [
     {'name': 'REDIS_PASS', 'value': None, 'type': <class 'NoneType'>},
     {'name': 'DEBUG', 'value': True, 'type': <class 'bool'>},
@@ -33,7 +33,11 @@ class MyConfig(Config):
     MYSQL_DB_USER: str
     ES_HOST: Json[List]
     TEST_LIST_INT: Json[List]
+    YML_ES_HOST: Optional[List[str]] = None
+    YML_TEST_LIST_INT: Optional[List[int]] = None
 
 
 config = MyConfig('./example_config.conf')
+print(config)
+config = MyConfig('./example_config.yml')
 print(config)
