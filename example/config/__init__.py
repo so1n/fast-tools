@@ -37,7 +37,7 @@ class MyConfig(Config):
     YML_TEST_LIST_INT: Optional[List[int]] = None
 
 
-config = MyConfig('./example_config.conf')
+config = MyConfig('example_config.ini', group='test')
 print(config)
-config = MyConfig('./example_config.yml')
+config = MyConfig('./example_config.yml', group='test')
 print(config)

@@ -2,6 +2,7 @@ import os
 import typing
 import yaml
 from collections.abc import MutableMapping
+from configparser import ConfigParser
 from typing import Any, Dict, NoReturn, Optional, Type
 
 from pydantic import (
@@ -55,47 +56,57 @@ environ = Environ()
 
 class Config:
     def __init__(
-        self, config_file: Optional[str] = None, _environ: typing.Mapping[str, str] = environ
+        self,
+        config_file: Optional[str] = None,
+        group: Optional[str] = None,
+        global_key: Optional[str] = 'global',
+        _environ: typing.Mapping[str, str] = environ
     ) -> None:
         self._config_dict: Dict[str, Any] = {}
-        self._environ = _environ
+        if group:
+            self._group = group
+        elif 'group' in _environ:
+            self._group = _environ['group']
+        else:
+            raise RuntimeError('Miss param `group` in __init__ or env')
+        self._global_key = global_key
+
         if config_file is not None and os.path.isfile(config_file):
             self._read_file(config_file)
+        else:
+            self._config_dict = {key: value for key, value in _environ.items()}
         self._init_obj()
 
     def _init_obj(self):
         annotation_dict: Dict[str, Type[Any, ...]] = {}
-
         for key in self.__annotations__:
+            if key != key.upper():
+                class_name: str = self.__class__.__name__
+                raise KeyError(f'key: {class_name}.{key} must like {class_name}.{key.upper()}')
             if key not in self._config_dict:
-                if key in self._environ:
-                    default_value = self._environ[key]
-                else:
-                    default_value = getattr(self, key, ...)
-                self._config_dict[key] = default_value
-
+                self._config_dict[key] = getattr(self, key, ...)
             annotation_dict[key] = (self.__annotations__[key], ...)
+
         dynamic_model: Type[BaseModel] = create_model('DynamicModel', **annotation_dict)
         self.__dict__.update(dynamic_model(**self._config_dict).dict())
 
     def _read_file(self, file_name: str) -> NoReturn:
-        with open(file_name) as input_file:
-            if file_name.endswith('conf'):
-                for line in input_file.readlines():
-                    line = line.strip()
-                    if "=" in line and not line.startswith("#"):
-                        key, value = line.split("=", 1)
-                        key = key.strip()
-                        value = value.strip().strip("\"'")
-                        self._config_dict[key] = value
-            elif file_name.endswith('.yml'):
-                self._config_dict = yaml.load(input_file, Loader=yaml.FullLoader)
-            else:
-                try:
-                    name, suffix = file_name.split('.')
-                except Exception:
-                    raise RuntimeError(f"Not support {file_name}")
-                raise RuntimeError(f'Not support {suffix}')
+        if file_name.endswith('.yml'):
+            with open(file_name) as input_file:
+                _dict: Dict[str, Dict[str, Any]] = yaml.load(input_file, Loader=yaml.FullLoader)
+                self._config_dict = _dict[self._global_key]
+                self._config_dict.update(_dict[self._group])
+        elif file_name.endswith('.ini'):
+            cf: 'ConfigParser' = ConfigParser()
+            cf.read(file_name)
+            self._config_dict = {key.upper(): value for key, value in cf.items(self._global_key)}
+            self._config_dict.update({key.upper(): value for key, value in cf.items(self._group)})
+        else:
+            try:
+                name, suffix = file_name.split('.')
+            except Exception:
+                raise RuntimeError(f"Not support {file_name}")
+            raise RuntimeError(f'Not support {suffix}')
 
     def __str__(self):
         return str(

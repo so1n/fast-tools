@@ -1,20 +1,22 @@
-# conf
-DEBUG: True
-PORT: 8000
-HOST: 127.0.0.1
-# redis
-REDIS_ADDRESS: localhost
+global:
+    # conf
+    DEBUG: True
+    PORT: 8000
+    HOST: 127.0.0.1
+test:
+    # redis
+    REDIS_ADDRESS: localhost
 
-# mysql
-MYSQL_DB_HOST: localhost
-MYSQL_DB_USER: root
-MYSQL_DB_PASS: rootpass
-MYSQL_DB_NAME: rootdb
+    # mysql
+    MYSQL_DB_HOST: localhost
+    MYSQL_DB_USER: root
+    MYSQL_DB_PASS: rootpass
+    MYSQL_DB_NAME: rootdb
 
-# ES
-ES_HOST: '["127.0.0.1:9200", "127.0.0.2:9200"]'
-YML_ES_HOST: ["127.0.0.1:9200", "127.0.0.2:9200"]
+    # ES
+    ES_HOST: '["127.0.0.1:9200", "127.0.0.2:9200"]'
+    YML_ES_HOST: ["127.0.0.1:9200", "127.0.0.2:9200"]
 
-# test list int
-TEST_LIST_INT: '[1, 2, 3, 4]'
-YML_TEST_LIST_INT: [1, 2, 3, 4]
+    # test list int
+    TEST_LIST_INT: '[1, 2, 3, 4]'
+    YML_TEST_LIST_INT: [1, 2, 3, 4]
