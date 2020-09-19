@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import FastAPI
 from fastapi_tools.route_trie import RouteTrie
 
