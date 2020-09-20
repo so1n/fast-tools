@@ -6,11 +6,11 @@ from typing import Optional
 
 @dataclass
 class Rule(object):
-    second: Optional[int] = None
-    minute: Optional[int] = None
-    hour: Optional[int] = None
-    day: Optional[int] = None
-    week: Optional[int] = None
+    second: int = 0
+    minute: int = 0
+    hour: int = 0
+    day: int = 0
+    week: int = 0
     max_token: int = 100
 
     def get_second(self) -> int:
