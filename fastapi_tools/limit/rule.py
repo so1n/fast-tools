@@ -6,6 +6,7 @@ from typing import Optional
 
 @dataclass
 class Rule(object):
+    gen_token: int = 1
     second: int = 0
     minute: int = 0
     hour: int = 0
@@ -13,23 +14,26 @@ class Rule(object):
     week: int = 0
     max_token: int = 100
 
-    def get_second(self) -> int:
+    def get_second(self) -> float:
         return timedelta(
             weeks=self.week,
             days=self.day,
             hours=self.hour,
             minutes=self.minute,
             seconds=self.second
-        ).seconds
+        ).total_seconds()
+
+    def get_token(self) -> int:
+        return int(self.gen_token / self.get_second())
 
 
 class TokenBucket(object):
 
     def __init__(self, rate: int, token_num: Optional[int] = None, max_token: int = 100):
-        self._rate: int = rate
+        self._rate: int = rate  # How many tokens are generated in one second
         self._token_num: int = token_num if token_num else max_token
         self._max_token: int = max_token
-        self._timestamp: int = int(time.time())
+        self._timestamp: float = time.time()
 
     def can_consume(self, token_num: int = 1) -> bool:
         if token_num <= self._get_tokens():
@@ -37,23 +41,21 @@ class TokenBucket(object):
             return True
         return False
 
-    def expected_time(self, token_num=1) -> int:
+    def expected_time(self, token_num=1) -> float:
         now_token_num: int = self._get_tokens()
         diff_token: int = now_token_num - token_num
         if diff_token > 0:
             return 0
         else:
-            return abs(diff_token) * self._rate
+            return abs(diff_token) / self._rate
 
     def _get_tokens(self) -> int:
         if self._token_num < self._max_token:
-            now = int(time.time())
-            diff_second: int = now - self._timestamp
-            gen_token = int(diff_second / self._rate)
-            miss_second: int = diff_second - gen_token * self._rate
-
+            now: float = time.time()
+            diff_time: float = now - self._timestamp
+            gen_token = int(diff_time * self._rate)
+            self._timestamp = now - (diff_time - int(diff_time))
             self._token_num = min(self._max_token, self._token_num + gen_token)
-            self._timestamp = now - miss_second
         return self._token_num
 
     @property

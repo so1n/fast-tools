@@ -9,7 +9,7 @@ app = FastAPI()
 app.add_middleware(
     limit.LimitMiddleware,
     rule_dict={
-        r"^api": limit.Rule(second=10)
+        r"^/api": limit.Rule(second=10)
     }
 )
 

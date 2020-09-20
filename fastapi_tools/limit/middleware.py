@@ -31,7 +31,7 @@ class LimitMiddleware(BaseHTTPMiddleware):
 
         token_bucket: Optional[TokenBucket] = self._cache_dict.get(pattern, None)
         if token_bucket is None:
-            token_bucket = TokenBucket(rules.get_second(), max_token=rules.max_token)
+            token_bucket = TokenBucket(rules.get_token(), max_token=rules.max_token)
             self._cache_dict[pattern] = token_bucket
 
         if token_bucket.can_consume():
