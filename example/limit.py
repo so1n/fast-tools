@@ -16,7 +16,7 @@ app.add_middleware(
 
 
 @app.get("/")
-@limit.limit(limit.Rule(second=10))
+@limit.limit(limit.Rule(second=10), limit_func=limit.func.client_ip)
 async def root():
     return {"Hello": "World"}
 
