@@ -7,7 +7,8 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
-from fastapi_tools.limit.rule import Rule, TokenBucket
+from fastapi_tools.limit.rule import Rule
+from fastapi_tools.limit.token_bucket import TokenBucket
 
 
 class LimitMiddleware(BaseHTTPMiddleware):

@@ -2,7 +2,8 @@ from functools import wraps
 from typing import Any, Callable, Dict
 
 from starlette.responses import Response
-from fastapi_tools.limit.rule import TokenBucket, Rule
+from fastapi_tools.limit.rule import Rule
+from fastapi_tools.limit.token_bucket import TokenBucket
 
 
 _cache_dict: Dict[str, Any] = {}
