@@ -8,6 +8,7 @@ app = FastAPI()
 
 app.add_middleware(
     limit.LimitMiddleware,
+    func=limit.func.client_ip,
     rule_dict={
         r"^/api": limit.Rule(second=10)
     }

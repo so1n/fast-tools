@@ -1,5 +1,6 @@
+import asyncio
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
@@ -16,10 +17,12 @@ class LimitMiddleware(BaseHTTPMiddleware):
             self,
             app: ASGIApp,
             *,
+            func: Optional[Callable] = None,
             rule_dict: Dict[str, Rule] = None
     ) -> None:
         super().__init__(app)
-        self._cache_dict: Dict[re.Pattern[str, Any]] = {}
+        self._func: Optional[Callable] = func
+        self._cache_dict: Dict[str, Any] = {}
         self._rule_dict: Dict[re.Pattern[str], Rule] = {re.compile(key): value for key, value in rule_dict.items()}
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -30,10 +33,17 @@ class LimitMiddleware(BaseHTTPMiddleware):
         else:
             return await call_next(request)
 
-        token_bucket: Optional[TokenBucket] = self._cache_dict.get(pattern, None)
+        key: str = str(pattern)
+        if self._func is not None:
+            if asyncio.iscoroutinefunction(self._func):
+                key = await self._func(request)
+            else:
+                key = self._func(request)
+
+        token_bucket: Optional[TokenBucket] = self._cache_dict.get(key, None)
         if token_bucket is None:
             token_bucket = TokenBucket(rules.get_token(), max_token=rules.max_token)
-            self._cache_dict[pattern] = token_bucket
+            self._cache_dict[key] = token_bucket
 
         if token_bucket.can_consume():
             return await call_next(request)
