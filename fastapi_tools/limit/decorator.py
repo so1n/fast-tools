@@ -11,7 +11,13 @@ from fastapi_tools.limit.token_bucket import TokenBucket
 _cache_dict: Dict[str, Any] = {}
 
 
-def limit(rule: Rule, limit_func: Optional[Callable] = None):
+def limit(
+        rule: Rule,
+        backend: TokenBucket = TokenBucket(),
+        limit_func: Optional[Callable] = None,
+        status_code: int = 429,
+        content: str = 'This user has exceeded an allotted request count. Try again later.',
+):
     def wrapper(func: Callable) -> Callable:
         @wraps(func)
         async def _limit(*args, **kwargs):
@@ -27,13 +33,9 @@ def limit(rule: Rule, limit_func: Optional[Callable] = None):
                 else:
                     key = limit_func(request)
 
-            token_bucket: TokenBucket = _cache_dict.get(key, None)
-            if token_bucket is None:
-                token_bucket: TokenBucket = TokenBucket(rule.get_token(), max_token=rule.max_token)
-                _cache_dict[key] = token_bucket
-            if token_bucket.can_consume():
+            if backend.can_requests(key, rule):
                 return await func(*args, **kwargs)
             else:
-                return Response(status_code=429)
+                return Response(content=content, status_code=status_code)
         return _limit
     return wrapper
