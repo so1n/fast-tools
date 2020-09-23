@@ -1,4 +1,5 @@
 import time
+import threading
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 from fastapi_tools.limit.rule import Rule
@@ -72,6 +73,26 @@ class TokenBucket(object):
 
     def get_token_num(self, key: str) -> int:
         return self._cache_dict[key].token_num
+
+
+class ThreadingTokenBucket(TokenBucket):
+
+    def __init__(
+            self,
+            token_num: Optional[int] = None,
+            block_time: Optional[int] = None,
+            max_token: int = 100
+    ):
+        super().__init__(token_num, block_time, max_token)
+        self._lock = threading.Lock()
+
+    def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+        with self._lock:
+            return super().can_requests(key, rule, token_num)
+
+    def expected_time(self, key: str, rule: Rule, token_num=1) -> float:
+        with self._lock:
+            return super().expected_time(key, rule, token_num)
 
 
 if __name__ == '__main__':
