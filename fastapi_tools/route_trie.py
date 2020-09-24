@@ -59,6 +59,8 @@ class RouteTrie:
         cur_node: 'RouteNode' = self._search_node(url_path)
 
         for route in cur_node.route_list:
+            if route.path == url_path:
+                return route
             match, child_scope = route.matches(scope)
             if match == Match.FULL:
                 return route
