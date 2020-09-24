@@ -1,23 +1,24 @@
 import asyncio
 from functools import wraps
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Optional
 
 from starlette.requests import Request
 from starlette.responses import Response
 from fastapi_tools.limit.rule import Rule
 from fastapi_tools.limit.backend.base import BaseLimitBackend
 from fastapi_tools.limit.backend.memory import TokenBucket
-
-
-_cache_dict: Dict[str, Any] = {}
+from fastapi_tools.limit.util import (
+    DEFAULT_CONTENT,
+    DEFAULT_STATUS_CODE
+)
 
 
 def limit(
         rule: Rule,
         backend: BaseLimitBackend = TokenBucket(),
         limit_func: Optional[Callable] = None,
-        status_code: int = 429,
-        content: str = 'This user has exceeded an allotted request count. Try again later.',
+        status_code: int = DEFAULT_STATUS_CODE,
+        content: str = DEFAULT_CONTENT,
 ):
     def wrapper(func: Callable) -> Callable:
         @wraps(func)
