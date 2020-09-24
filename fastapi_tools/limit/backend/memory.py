@@ -3,6 +3,7 @@ import threading
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 from fastapi_tools.limit.rule import Rule
+from .base import BaseLimitBackend
 
 
 @dataclass
@@ -14,7 +15,7 @@ class Bucket(object):
     block_time: Optional[float] = None
 
 
-class TokenBucket(object):
+class TokenBucket(BaseLimitBackend):
 
     def __init__(
             self,
@@ -75,7 +76,7 @@ class TokenBucket(object):
         return self._cache_dict[key].token_num
 
 
-class ThreadingTokenBucket(TokenBucket):
+class ThreadingTokenBucket(BaseLimitBackend):
 
     def __init__(
             self,

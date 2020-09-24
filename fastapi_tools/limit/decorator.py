@@ -5,7 +5,8 @@ from typing import Any, Callable, Dict, Optional
 from starlette.requests import Request
 from starlette.responses import Response
 from fastapi_tools.limit.rule import Rule
-from fastapi_tools.limit.token_bucket import TokenBucket
+from fastapi_tools.limit.backend.base import BaseLimitBackend
+from fastapi_tools.limit.backend.memory import TokenBucket
 
 
 _cache_dict: Dict[str, Any] = {}
@@ -13,7 +14,7 @@ _cache_dict: Dict[str, Any] = {}
 
 def limit(
         rule: Rule,
-        backend: TokenBucket = TokenBucket(),
+        backend: BaseLimitBackend = TokenBucket(),
         limit_func: Optional[Callable] = None,
         status_code: int = 429,
         content: str = 'This user has exceeded an allotted request count. Try again later.',

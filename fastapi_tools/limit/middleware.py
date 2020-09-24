@@ -1,6 +1,6 @@
 import asyncio
 import re
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Dict, Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
@@ -9,7 +9,8 @@ from starlette.responses import Response
 from starlette.types import ASGIApp
 
 from fastapi_tools.limit.rule import Rule
-from fastapi_tools.limit.token_bucket import TokenBucket
+from fastapi_tools.limit.backend.base import BaseLimitBackend
+from fastapi_tools.limit.backend.memory import TokenBucket
 
 
 class LimitMiddleware(BaseHTTPMiddleware):
@@ -17,14 +18,14 @@ class LimitMiddleware(BaseHTTPMiddleware):
             self,
             app: ASGIApp,
             *,
-            backend: TokenBucket = TokenBucket(),
+            backend: BaseLimitBackend = TokenBucket(),
             status_code: int = 429,
             content: str = 'This user has exceeded an allotted request count. Try again later.',
             func: Optional[Callable] = None,
             rule_dict: Dict[str, Rule] = None
     ) -> None:
         super().__init__(app)
-        self._backend: TokenBucket = backend
+        self._backend: BaseLimitBackend = backend
         self._content: str = content
         self._func: Optional[Callable] = func
         self._status_code: int = status_code
