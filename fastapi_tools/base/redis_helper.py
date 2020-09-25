@@ -2,7 +2,7 @@ __author__ = 'so1n'
 __date__ = '2020-010'
 
 import asyncio
-from contextlib import contextmanager
+from contextlib import asynccontextmanager
 import datetime
 import logging
 import json
@@ -15,17 +15,18 @@ class RedisHelper(object):
 
     def __init__(
             self,
-            conn_pool: 'ConnectionsPool',
+            conn_pool: Optional['ConnectionsPool'] = None,
             namespace: str = 'fastapi-tools',
-            loop: asyncio.AbstractEventLoop = None,
     ):
         self._namespace: str = namespace
+        self._conn_pool: Optional['ConnectionsPool'] = None
+        self.redis_pool: Optional['Redis'] = None
+        self.reload(conn_pool)
 
-        self._conn_pool = conn_pool
-        self._redis_pool: Optional['Redis'] = None
-        if not conn_pool.closed:
-            self._redis_pool = Redis(self._conn_pool)
-        self._loop = loop if loop else asyncio.get_event_loop()
+    def reload(self, conn_pool: 'ConnectionsPool'):
+        if not all([conn_pool, self._conn_pool]):
+            self._conn_pool = conn_pool
+            self.redis_pool = Redis(self._conn_pool)
 
     async def execute(self, command: str, *args: Any, **kwargs: Any) -> Optional[Any]:
         try:
@@ -33,11 +34,12 @@ class RedisHelper(object):
                 return await conn.execute(command, *args, **kwargs)
         except Exception as e:
             logging.error(
-                f'{self.__name__} execute error. error:{e}, command:{command}, args:{args}, kwargs:{kwargs}'
+                f'{self.__class__.__name__} execute error. error:{e}.'
+                f' command:{command}, args:{args}, kwargs:{kwargs}'
             )
         return None
 
-    @contextmanager
+    @asynccontextmanager
     async def lock(self, name: str, timeout: int = 1 * 60, time_format: str = "%Y-%m-%d") -> bool:
         today_string: str = datetime.datetime.now().strftime(time_format)
         key: str = f"{self._namespace}:lock:{name}:{today_string}"
@@ -65,6 +67,7 @@ class RedisHelper(object):
         return json.loads(data)
 
     async def set_dict(self, key, data: dict, timeout: Optional[int] = None) -> None:
+        print(data)
         await self.execute('set', key, json.dumps(data))
         if timeout:
             await self.execute('EXPIRE', key, timeout)
@@ -76,7 +79,7 @@ class RedisHelper(object):
 
     async def pipeline(self, exec_list: List[Tuple]) -> Optional[list]:
         try:
-            p = self._redis_pool.pipeline()
+            p = self.redis_pool.pipeline()
             for command, *args in exec_list:
                 if command == 'del':
                     command = 'delete'
