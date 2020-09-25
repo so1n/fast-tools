@@ -1,6 +1,7 @@
 # fastapi-tools
 A collection of tools available for FastApi. Easy to use FastApi(part can be used for starlette)
 [中文](https://github.com/so1n/fastapi-tools/blob/master/README_CH.md)
+Note: this is alpha quality code still, the API may change, and things may fall apart while you try it.
 
 # Usage
 ## 1.exporter
@@ -14,7 +15,7 @@ from typing import Optional
 
 from fastapi import FastAPI
 from fastapi_tools.exporter import PrometheusMiddleware, get_metrics
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base.route_trie import RouteTrie
 
 
 app = FastAPI()
@@ -132,7 +133,7 @@ Python's web framework uses traversal matching to implement route lookup. If you
 The prefix tree reconstructs the route search, which can quickly find the route in the middleware and improve the query speed
 ```Python
 from fastapi import FastAPI
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base.route_trie import RouteTrie
 
 app = FastAPI()
 
@@ -174,7 +175,7 @@ from typing import Optional
 
 from fastapi import FastAPI
 from fastapi_tools.statsd_middleware import StatsdClient, StatsdMiddleware
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base.route_trie import RouteTrie
 
 
 app = FastAPI()

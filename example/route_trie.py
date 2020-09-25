@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base import RouteTrie
 
 app = FastAPI()
 

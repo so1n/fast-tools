@@ -12,7 +12,7 @@ from typing import Optional
 
 from fastapi import FastAPI
 from fastapi_tools.exporter import PrometheusMiddleware, get_metrics
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base.route_trie import RouteTrie
 
 
 app = FastAPI()
@@ -160,7 +160,7 @@ python的web框架为了支持`/api/user/{user_id}`的写法都是先遍历路�
 如果改为dict在进行路由匹配,虽然速度很快,但是却不支持上述所说的url,所以以前缀树重构了路由查找,可以尽快的匹配到路由的大致区域,再进行正则匹配,检查路由是否正确.
 ```Python
 from fastapi import FastAPI
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base.route_trie import RouteTrie
 
 app = FastAPI()
 
@@ -202,7 +202,7 @@ from typing import Optional
 
 from fastapi import FastAPI
 from fastapi_tools.statsd_middleware import StatsdClient, StatsdMiddleware
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base.route_trie import RouteTrie
 
 
 app = FastAPI()

@@ -8,7 +8,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base import RouteTrie
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):

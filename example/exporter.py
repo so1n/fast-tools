@@ -2,7 +2,7 @@ from typing import Optional
 
 from fastapi import FastAPI
 from fastapi_tools.exporter import PrometheusMiddleware, get_metrics
-from fastapi_tools.route_trie import RouteTrie
+from fastapi_tools.base import RouteTrie
 
 
 app = FastAPI()
