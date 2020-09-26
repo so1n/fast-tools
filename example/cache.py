@@ -39,6 +39,12 @@ async def user_login() -> JSONResponse:
     return JSONResponse({"timestamp": time.time()})
 
 
+@app.get("api/null")
+@cache(redis_helper, 60)
+async def test_not_return_annotation():
+    return JSONResponse({"timestamp": time.time()})
+
+
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run(app)

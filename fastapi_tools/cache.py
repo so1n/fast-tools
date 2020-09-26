@@ -90,14 +90,27 @@ def cache(
         async def return_normal_handle(*args, **kwargs):
             return await func(*args, **kwargs)
 
-        return_annotation = inspect.signature(func).return_annotation
+        sig: 'inspect.signature' = inspect.signature(func)
+        return_annotation = sig.return_annotation
         if return_annotation is dict or _check_typing_type(return_annotation, 'dict'):
-            return return_dict_handle
+            handle_func: Callable = return_dict_handle
         elif issubclass(return_annotation, Response):
-            return return_response_handle
+            handle_func: Callable = return_response_handle
         else:
-            logging.warning(f'{func.__name__} not use cache')
+            if return_annotation is sig.empty:
+                return_annotation = None
+
+            logging.warning(
+                f"func name:{func.__name__} return annotation:{return_annotation}."
+                f" Can not use cache."
+                f" Please check return annotation in ({dict}, {Dict}, {Response})"
+            )
             return return_normal_handle
+        logging.debug(
+            f"func name:{func.__name__} return annotation:{return_annotation}."
+            f" load cache handle {return_dict_handle} success"
+        )
+        return handle_func
 
     return wrapper
 
