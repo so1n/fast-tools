@@ -3,7 +3,7 @@ import inspect
 import logging
 import json
 from functools import wraps
-from typing import Any, Dict, Type
+from typing import Any, Callable, Awaitable, Dict, List, Optional, Type
 
 from starlette.responses import Response, JSONResponse
 from fastapi_tools.base import RedisHelper
@@ -16,11 +16,17 @@ def _check_typing_type(_type, origin_name: str) -> bool:
         return False
 
 
+async def cache_control(response: Response, backend: 'RedisHelper', key: str):
+    ttl = await backend.redis_pool.ttl(key)
+    response.headers["Cache-Control"] = f"max-age={ttl}"
+
+
 def cache(
     backend: 'RedisHelper',
     expire: int = None,
     namespace: str = "fastapi-tools",
-    json_response: Type[JSONResponse] = JSONResponse
+    json_response: Type[JSONResponse] = JSONResponse,
+    after_cache_response_list: Optional[List[Callable[[Response, 'RedisHelper', str], Awaitable]]] = None,
 ):
     def wrapper(func):
         @wraps(func)
@@ -28,7 +34,10 @@ def cache(
             key: str = f'{namespace}:{func.__name__}:{args}:{kwargs}'
             ret: Dict[str, Any] = await backend.get_dict(key)
             if ret is not None:
-                return json_response(ret)
+                response: Response = json_response(ret)
+                for after_cache_response in after_cache_response_list:
+                    await after_cache_response(response, backend, key)
+                return response
 
             # TODO replace `share`
             while True:
@@ -45,7 +54,10 @@ def cache(
             key: str = f'{namespace}:{func.__name__}:{args}:{kwargs}'
             ret: Dict[str, Any] = await backend.get_dict(key)
             if ret is not None:
-                return return_annotation(**ret)
+                response: Response = return_annotation(**ret)
+                for after_cache_response in after_cache_response_list:
+                    await after_cache_response(response, backend, key)
+                return response
 
             # TODO replace `share`
             while True:

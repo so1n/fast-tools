@@ -67,7 +67,6 @@ class RedisHelper(object):
         return json.loads(data)
 
     async def set_dict(self, key, data: dict, timeout: Optional[int] = None) -> None:
-        print(data)
         await self.execute('set', key, json.dumps(data))
         if timeout:
             await self.execute('EXPIRE', key, timeout)

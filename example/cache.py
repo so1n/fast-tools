@@ -6,7 +6,10 @@ from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
 from fastapi_tools.base import RedisHelper
-from fastapi_tools.cache import cache
+from fastapi_tools.cache import (
+    cache,
+    cache_control
+)
 
 
 app = FastAPI()
@@ -31,7 +34,7 @@ async def root() -> dict:
 
 
 @app.get("/api/users/login")
-@cache(redis_helper, 60)
+@cache(redis_helper, 60, after_cache_response_list=[cache_control])
 async def user_login() -> JSONResponse:
     return JSONResponse({"timestamp": time.time()})
 
