@@ -22,6 +22,39 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
         self._backend: 'RedisHelper' = backend
 
 
+class FixedWindowBackend(BaseRedisBackend):
+    async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+        block_time_key: str = key + ':block_time'
+        block_time = await self._backend.redis_pool.get(block_time_key)
+        if block_time:
+            return False
+        access_num: int = await self._backend.redis_pool.incr(key)
+        if access_num == 1:
+            await self._backend.redis_pool.expire(key, rule.gen_rate())
+
+        max_token: int = rule.max_token if rule.max_token else self._max_token
+        can_requests: bool = not access_num > max_token
+        if not can_requests:
+            bucket_block_time: int = rule.block_time if rule.block_time else self._block_time
+            await self._backend.redis_pool.set(block_time_key, bucket_block_time, expire=bucket_block_time)
+        return can_requests
+
+    async def expected_time(self, key: str, rule: Rule, token_num=1) -> float:
+        block_time_key: str = key + ':block_time'
+        block_time = await self._backend.redis_pool.get(block_time_key)
+        if block_time:
+            return await self._backend.redis_pool.ttl(block_time_key)
+
+        result = await self._backend.redis_pool.get(key)
+        if result is None:
+            return 0
+
+        max_token: int = rule.max_token if rule.max_token else self._max_token
+        if result < max_token:
+            return 0
+        return await self._backend.redis_pool.ttl(key)
+
+
 class RedisCellBackend(BaseRedisBackend):
     """
     use redis-cell module
@@ -60,10 +93,11 @@ class RedisCellBackend(BaseRedisBackend):
         can_requests: bool = bool(result[0])
         if not can_requests:
             bucket_block_time: int = rule.block_time if rule.block_time else self._block_time
-            await self._backend.redis_pool.set(block_time_key, bucket_block_time, expire=bucket_block_time + 10)
+            await self._backend.redis_pool.set(block_time_key, bucket_block_time, expire=bucket_block_time)
         return can_requests
 
     async def expected_time(self, key: str, rule: Rule, token_num=0) -> float:
+
         if token_num:
             logging.warning(
                 f'Sorry, {self.__class__.__name__}.expected_time not support token_num > 0, token_num will be set 0'
