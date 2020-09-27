@@ -39,7 +39,7 @@ class FixedWindowBackend(BaseRedisBackend):
             await self._backend.redis_pool.set(block_time_key, bucket_block_time, expire=bucket_block_time)
         return can_requests
 
-    async def expected_time(self, key: str, rule: Rule, token_num=1) -> float:
+    async def expected_time(self, key: str, rule: Rule) -> float:
         block_time_key: str = key + ':block_time'
         block_time = await self._backend.redis_pool.get(block_time_key)
         if block_time:
@@ -96,11 +96,11 @@ class RedisCellBackend(BaseRedisBackend):
             await self._backend.redis_pool.set(block_time_key, bucket_block_time, expire=bucket_block_time)
         return can_requests
 
-    async def expected_time(self, key: str, rule: Rule, token_num=0) -> float:
+    async def expected_time(self, key: str, rule: Rule) -> float:
+        block_time_key: str = key + ':block_time'
+        block_time = await self._backend.redis_pool.get(block_time_key)
+        if block_time:
+            return await self._backend.redis_pool.ttl(block_time_key)
 
-        if token_num:
-            logging.warning(
-                f'Sorry, {self.__class__.__name__}.expected_time not support token_num > 0, token_num will be set 0'
-            )
         result: List[int] = await self._call_cell(key, rule, 0)
         return float(max(result[3], 0))

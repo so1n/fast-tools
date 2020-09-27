@@ -51,16 +51,19 @@ class TokenBucket(BaseLimitBackend):
         self._cache_dict[key] = bucket
         return result
 
-    def expected_time(self, key: str, rule: Rule, token_num=1) -> float:
+    def expected_time(self, key: str, rule: Rule) -> float:
         bucket: 'Bucket' = self._cache_dict.get(key, self._gen_bucket(rule))
+        diff_block_time: float = bucket.block_time - time.time()
+        if diff_block_time > 0:
+            return diff_block_time
+
         now_token_num: int = self._get_tokens(bucket)
-        diff_token: int = now_token_num - token_num
 
         self._cache_dict[key] = bucket
-        if diff_token > 0:
+        if now_token_num < self._cache_dict[key].max_token:
             return 0
         else:
-            return abs(diff_token) / bucket.rate
+            return 1 / bucket.rate
 
     @staticmethod
     def _get_tokens(bucket: 'Bucket') -> int:
@@ -91,9 +94,9 @@ class ThreadingTokenBucket(BaseLimitBackend):
         with self._lock:
             return super().can_requests(key, rule, token_num)
 
-    def expected_time(self, key: str, rule: Rule, token_num=1) -> float:
+    def expected_time(self, key: str, rule: Rule) -> float:
         with self._lock:
-            return super().expected_time(key, rule, token_num)
+            return super().expected_time(key, rule)
 
 
 if __name__ == '__main__':
