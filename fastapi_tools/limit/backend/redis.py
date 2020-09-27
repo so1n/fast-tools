@@ -1,3 +1,4 @@
+import logging
 from abc import ABC
 from typing import Dict, List, Optional
 
@@ -44,15 +45,28 @@ class RedisCellBackend(BaseRedisBackend):
 
     async def _call_cell(self, key: str, rule: Rule, token_num: int = 1) -> List[int]:
         max_token: int = rule.max_token if rule.max_token else self._max_token
+        bucket_token_num: int = rule.token_num if rule.token_num else self._token_num
         result: List[int] = await self._backend.execute(
-            'CL.THROTTLE', key, max_token, rule.token_num, rule.gen_token, rule.gen_second(), token_num
+            'CL.THROTTLE', key, max_token, bucket_token_num, rule.gen_token, rule.gen_second(), token_num
         )
         return result
 
     async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+        block_time_key: str = key + ':block_time'
+        block_time = await self._backend.redis_pool.get(block_time_key)
+        if block_time:
+            return False
         result: List[int] = await self._call_cell(key, rule, token_num)
-        return bool(result[0])
+        can_requests: bool = bool(result[0])
+        if not can_requests:
+            bucket_block_time: int = rule.block_time if rule.block_time else self._block_time
+            await self._backend.redis_pool.set(block_time_key, bucket_block_time, expire=bucket_block_time + 10)
+        return can_requests
 
-    async def expected_time(self, key: str, rule: Rule, token_num=1) -> float:
-        result: List[int] = await self._call_cell(key, rule, token_num)
+    async def expected_time(self, key: str, rule: Rule, token_num=0) -> float:
+        if token_num:
+            logging.warning(
+                f'Sorry, {self.__class__.__name__}.expected_time not support token_num > 0, token_num will be set 0'
+            )
+        result: List[int] = await self._call_cell(key, rule, 0)
         return float(max(result[3], 0))
