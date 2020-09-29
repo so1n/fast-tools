@@ -27,6 +27,7 @@ def limit(
             for arg in args:
                 if isinstance(arg, Request):
                     request = arg
+                    break
 
             key: str = str(id(func))
             if limit_func is not None and request is not None:
