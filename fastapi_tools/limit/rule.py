@@ -19,6 +19,8 @@ class Rule(object):
 
     block_time: Optional[int] = None
 
+    _kwargs: Optional[Dict[str, Any]] = None
+
     def gen_second(self) -> float:
         return timedelta(
             weeks=self.week,
@@ -36,12 +38,13 @@ class Rule(object):
         return int(self.gen_token / self.gen_second())
 
     def gen_kwargs(self) -> Dict[str, Any]:
-        kwargs: Dict[str, Any] = {
-            'rate': self.gen_rate(),
-            'timestamp': time.time(),
-        }
-        for key in ['token_num', 'max_token', 'block_time']:
-            value = getattr(self, key, None)
-            if value is not None:
-                kwargs[key] = value
-        return kwargs
+        if not self._kwargs:
+            self._kwargs: Dict[str, Any] = {
+                'rate': self.gen_rate(),
+                'timestamp': time.time(),
+            }
+            for key in ['token_num', 'max_token', 'block_time']:
+                value = getattr(self, key, None)
+                if value is not None:
+                    self._kwargs[key] = value
+        return self._kwargs
