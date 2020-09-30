@@ -18,6 +18,8 @@ class Rule(object):
     gen_token_num: int = 1  # The number of tokens generated per unit time
     init_token_num: Optional[int] = None  # The initial number of tokens in the bucket
 
+    group: Optional[str] = None
+
     block_time: Optional[int] = None
 
     _kwargs: Optional[Dict[str, Any]] = None

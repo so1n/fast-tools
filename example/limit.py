@@ -1,22 +1,26 @@
-from typing import Optional
+from typing import Optional, Tuple
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi_tools import limit
+
+
+def limit_func(requests: Request) -> Tuple[str, str]:
+    return requests.session['user'], requests.session['group']
 
 
 app = FastAPI()
 
 app.add_middleware(
     limit.LimitMiddleware,
-    func=limit.func.client_ip,
+    func=limit_func,
     rule_dict={
-        r"^/api": limit.Rule(second=10)
+        r"^/api": [limit.Rule(second=10, group='admin'), limit.Rule(second=10, group='user')]
     }
 )
 
 
 @app.get("/")
-@limit.limit(limit.Rule(second=10), limit_func=limit.func.client_ip)
+@limit.limit([limit.Rule(second=10)], limit_func=limit.func.client_ip)
 async def root():
     return {"Hello": "World"}
 
