@@ -12,12 +12,12 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
     def __init__(
             self,
             backend: 'RedisHelper',
-            token_num: Optional[int] = None,
+            init_token_num: Optional[int] = None,
             block_time: Optional[int] = None,
-            max_token: int = 100
+            max_token_num: int = 100
     ):
-        self._token_num: int = token_num if token_num else max_token
-        self._max_token: int = max_token
+        self._init_token_num: int = init_token_num if init_token_num else max_token_num
+        self._max_token_num: int = max_token_num
         self._block_time: Optional[int] = block_time
         self._backend: 'RedisHelper' = backend
 
@@ -26,12 +26,11 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
         bucket_block_time: int = rule.block_time if rule.block_time is not None else self._block_time
 
         if bucket_block_time is not None:
-            block_time = await self._backend.redis_pool.get(block_time_key)
-            if block_time:
+            if await self._backend.exists(block_time_key):
                 return False
 
         can_requests = await func()
-        if not can_requests and bucket_block_time is not None:
+        if not can_requests:
             await self._backend.redis_pool.set(block_time_key, bucket_block_time, expire=bucket_block_time)
 
         return can_requests
@@ -44,7 +43,7 @@ class RedisFixedWindowBackend(BaseRedisBackend):
             if access_num == 1:
                 await self._backend.redis_pool.expire(key, rule.gen_rate())
 
-            max_token: int = rule.max_token if rule.max_token else self._max_token
+            max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
             can_requests: bool = not access_num > max_token
             return can_requests
 
@@ -56,12 +55,12 @@ class RedisFixedWindowBackend(BaseRedisBackend):
         if block_time:
             return await self._backend.redis_pool.ttl(block_time_key)
 
-        result = await self._backend.redis_pool.get(key)
-        if result is None:
+        token_num = await self._backend.redis_pool.get(key)
+        if token_num is None:
             return 0
 
-        max_token: int = rule.max_token if rule.max_token else self._max_token
-        if result < max_token:
+        max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
+        if token_num < max_token:
             return 0
         return await self._backend.redis_pool.ttl(key)
 
@@ -88,10 +87,10 @@ class RedisCellBackend(BaseRedisBackend):
     """
 
     async def _call_cell(self, key: str, rule: Rule, token_num: int = 1) -> List[int]:
-        max_token: int = rule.max_token if rule.max_token else self._max_token
-        bucket_token_num: int = rule.gen_token if rule.gen_token else self._token_num
+        max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
+        bucket_token_num: int = rule.gen_token_num if rule.gen_token_num else self._init_token_num
         result: List[int] = await self._backend.execute(
-            'CL.THROTTLE', key, max_token, bucket_token_num, rule.gen_token, rule.gen_second(), token_num
+            'CL.THROTTLE', key, max_token, rule.gen_token_num, rule.gen_second(), token_num
         )
         return result
 
@@ -114,7 +113,7 @@ class RedisCellBackend(BaseRedisBackend):
 
 
 class RedisTokenBucketBackend(BaseRedisBackend):
-    lua_script = """
+    _lua_script = """
 local key = KEYS[1]
 local currentTime = tonumber(ARGV[1])
 local intervalPerToken = tonumber(ARGV[2])
@@ -148,13 +147,12 @@ end
 
     async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         async def _can_requests() -> bool:
-            max_token: int = rule.max_token if rule.max_token else self._max_token
-            bucket_token_num: int = rule.token_num if rule.token_num else self._token_num
-
+            max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
+            init_token_num: int = rule.init_token_num if rule.init_token_num else self._init_token_num
             return await self._backend.redis_pool.eval(
-                self.lua_script,
+                self._lua_script,
                 keys=[key],
-                args=[int(time.time() * 1000), rule.gen_rate(), max_token, bucket_token_num, ]
+                args=[int(time.time() * 1000), rule.gen_rate(), max_token, init_token_num]
             )
         
         return await self._block_time_handle(key, rule, _can_requests)
@@ -165,6 +163,6 @@ end
         if block_time:
             return await self._backend.redis_pool.ttl(block_time_key)
         last_time = await self._backend.redis_pool.hget(key, 'lastTime')
-        if last_time or last_time is None:
+        if last_time is None:
             return True
         return False
