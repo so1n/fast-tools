@@ -1,3 +1,4 @@
+import time
 from abc import ABC
 from typing import Awaitable, Callable, List, Optional
 
@@ -36,7 +37,7 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
         return can_requests
 
 
-class FixedWindowBackend(BaseRedisBackend):
+class RedisFixedWindowBackend(BaseRedisBackend):
     async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         async def _can_requests() -> bool:
             access_num: int = await self._backend.redis_pool.incr(key)
@@ -110,3 +111,60 @@ class RedisCellBackend(BaseRedisBackend):
 
         result: List[int] = await self._call_cell(key, rule, 0)
         return float(max(result[3], 0))
+
+
+class RedisTokenBucketBackend(BaseRedisBackend):
+    lua_script = """
+local key = KEYS[1]
+local currentTime = tonumber(ARGV[1])
+local intervalPerToken = tonumber(ARGV[2])
+local maxToken = tonumber(ARGV[3])
+local initToken = tonumber(ARGV[4])
+local tokens
+local bucket = redis.call("hmget", key, "lastTime", "lastToken")
+local lastTime = bucket[1]
+local lastToken = bucket[2]
+if lastTime == false or lastToken == false then
+    tokens = initToken
+    redis.call('hset', key, 'lastTime', currentTime)
+else
+    local thisInterval = currentTime - tonumber(lastTime)
+    if thisInterval > 0 then
+        local tokensToAdd = math.floor(thisInterval / intervalPerToken)
+        tokens = math.min(lastToken + tokensToAdd, maxToken)
+        redis.call('hset', key, 'lastTime', lastTime + intervalPerToken * tokensToAdd)
+    else
+        tokens = lastToken
+    end
+end
+if tokens == 0 then
+    redis.call('hset', key, 'lastToken', tokens)
+    return false
+else
+    redis.call('hset', key, 'lastToken', tokens - 1)
+    return true
+end
+    """
+
+    async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+        async def _can_requests() -> bool:
+            max_token: int = rule.max_token if rule.max_token else self._max_token
+            bucket_token_num: int = rule.token_num if rule.token_num else self._token_num
+
+            return await self._backend.redis_pool.eval(
+                self.lua_script,
+                keys=[key],
+                args=[int(time.time() * 1000), rule.gen_rate(), max_token, bucket_token_num, ]
+            )
+        
+        return await self._block_time_handle(key, rule, _can_requests)
+
+    async def expected_time(self, key: str, rule: Rule) -> float:
+        block_time_key: str = key + ':block_time'
+        block_time = await self._backend.redis_pool.get(block_time_key)
+        if block_time:
+            return await self._backend.redis_pool.ttl(block_time_key)
+        last_time = await self._backend.redis_pool.hget(key, 'lastTime')
+        if last_time or last_time is None:
+            return True
+        return False
