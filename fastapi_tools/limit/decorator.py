@@ -1,6 +1,6 @@
 import asyncio
 from functools import wraps
-from typing import Callable, Optional
+from typing import Awaitable, Callable, Optional, Union
 
 from starlette.requests import Request
 from starlette.responses import Response
@@ -36,7 +36,10 @@ def limit(
                 else:
                     key = limit_func(request)
 
-            if backend.can_requests(key, rule):
+            can_requests: Union[bool, Awaitable[bool]] = backend.can_requests(key, rule)
+            if asyncio.iscoroutine(can_requests):
+                can_requests = await can_requests
+            if can_requests:
                 return await func(*args, **kwargs)
             else:
                 return Response(content=content, status_code=status_code)

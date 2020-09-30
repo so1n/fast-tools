@@ -1,6 +1,6 @@
 import asyncio
 import re
-from typing import Callable, Dict, Optional
+from typing import Awaitable, Callable, Dict, Optional, Union
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
@@ -51,7 +51,10 @@ class LimitMiddleware(BaseHTTPMiddleware):
             else:
                 key = self._func(request)
 
-        if self._backend.can_requests(key, rule):
+        can_requests: Union[bool, Awaitable[bool]] = self._backend.can_requests(key, rule)
+        if asyncio.iscoroutine(can_requests):
+            can_requests = await can_requests
+        if can_requests:
             return await call_next(request)
         else:
             return Response(content=self._content, status_code=self._status_code)
