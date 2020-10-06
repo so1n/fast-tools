@@ -88,7 +88,6 @@ class RedisCellBackend(BaseRedisBackend):
 
     async def _call_cell(self, key: str, rule: Rule, token_num: int = 1) -> List[int]:
         max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
-        bucket_token_num: int = rule.gen_token_num if rule.gen_token_num else self._init_token_num
         result: List[int] = await self._backend.execute(
             'CL.THROTTLE', key, max_token, rule.gen_token_num, rule.gen_second(), token_num
         )
@@ -164,5 +163,8 @@ end
             return await self._backend.redis_pool.ttl(block_time_key)
         last_time = await self._backend.redis_pool.hget(key, 'lastTime')
         if last_time is None:
-            return True
-        return False
+            return 0
+        diff_time = last_time - time.time() * 1000
+        if diff_time > 0:
+            return diff_time
+        return 0
