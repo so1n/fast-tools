@@ -1,6 +1,8 @@
 from typing import Optional, Tuple
 
+import aioredis
 from fastapi import FastAPI, Request
+from fastapi_tools.base import RedisHelper
 from fastapi_tools import limit
 
 
@@ -9,6 +11,12 @@ def limit_func(requests: Request) -> Tuple[str, str]:
 
 
 app = FastAPI()
+redis_helper: 'RedisHelper' = RedisHelper()
+
+
+@app.on_event("startup")
+async def startup():
+    redis_helper.reload(await aioredis.create_pool('redis://localhost', minsize=1, maxsize=10, encoding='utf-8'))
 
 app.add_middleware(
     limit.LimitMiddleware,
@@ -20,7 +28,11 @@ app.add_middleware(
 
 
 @app.get("/")
-@limit.limit([limit.Rule(second=10)], limit_func=limit.func.client_ip)
+@limit.limit(
+    [limit.Rule(second=10)],
+    limit.backend.RedisFixedWindowBackend(redis_helper),
+    limit_func=limit.func.client_ip
+)
 async def root():
     return {"Hello": "World"}
 
