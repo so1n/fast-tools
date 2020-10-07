@@ -16,7 +16,7 @@ redis_helper: 'RedisHelper' = RedisHelper()
 
 @app.on_event("startup")
 async def startup():
-    redis_helper.reload(await aioredis.create_pool('redis://localhost', minsize=1, maxsize=10, encoding='utf-8'))
+    redis_helper.init(await aioredis.create_pool('redis://localhost', minsize=1, maxsize=10, encoding='utf-8'))
 
 app.add_middleware(
     limit.LimitMiddleware,

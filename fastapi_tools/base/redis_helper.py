@@ -1,11 +1,11 @@
 __author__ = 'so1n'
-__date__ = '2020-010'
+__date__ = '2020-10'
 
 
-from contextlib import asynccontextmanager
 import datetime
 import logging
 import json
+from contextlib import asynccontextmanager
 from typing import Optional, Any, List, Tuple
 
 from aioredis import ConnectionsPool, Redis
@@ -23,10 +23,21 @@ class RedisHelper(object):
         self.redis_pool: Optional['Redis'] = None
         self.reload(conn_pool)
 
+    def init(self, conn_pool: 'ConnectionsPool'):
+        if conn_pool is None or self._conn_pool.closed:
+            logging.error('conn_pool is none or conn_pool not connect')
+        elif self._conn_pool is not None and not self._conn_pool.closed:
+            self._conn_pool = conn_pool
+            self.redis_pool = Redis(self._conn_pool)
+        else:
+            logging.error(f'Init error, {self.__class__.__name__} already init')
+
     def reload(self, conn_pool: 'ConnectionsPool'):
         if not all([conn_pool, self._conn_pool]):
             self._conn_pool = conn_pool
             self.redis_pool = Redis(self._conn_pool)
+        else:
+            logging.error(f'{self.__class__.__name__} reload error')
 
     async def execute(self, command: str, *args: Any, **kwargs: Any) -> Optional[Any]:
         try:
@@ -120,10 +131,12 @@ class RedisHelper(object):
         return return_dict
 
     def closed(self):
-        return self._conn_pool.closed()
+        return self._conn_pool.closed
 
     async def close(self) -> None:
-        logging.info('Redis Close.')
-        if self._conn_pool:
+        if self._conn_pool is not None and not self._conn_pool.closed:
+            logging.info(f'{self.__class__.__name__} Close.')
             self._conn_pool.close()
             await self._conn_pool.wait_closed()
+        else:
+            logging.warning(f'{self.__class__.__name__} has been closed')
