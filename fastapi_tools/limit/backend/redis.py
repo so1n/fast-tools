@@ -127,20 +127,20 @@ if lastTime == false or lastToken == false then
     redis.call('hset', key, 'lastTime', currentTime)
 else
     local thisInterval = currentTime - tonumber(lastTime)
-    if thisInterval > 0 then
-        local tokensToAdd = math.floor(thisInterval / intervalPerToken)
+    if thisInterval > 1 then
+        local tokensToAdd = math.floor(thisInterval * intervalPerToken)
         tokens = math.min(lastToken + tokensToAdd, maxToken)
-        redis.call('hset', key, 'lastTime', lastTime + intervalPerToken * tokensToAdd)
+        redis.call('hset', key, 'lastTime', currentTime)
     else
         tokens = lastToken
     end
 end
-if tokens == 0 then
+if tokens < 1 then
     redis.call('hset', key, 'lastToken', tokens)
-    return false
+    return 'false'
 else
     redis.call('hset', key, 'lastToken', tokens - 1)
-    return true
+    return tokens - 1
 end
     """
 
@@ -148,12 +148,13 @@ end
         async def _can_requests() -> bool:
             max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
             init_token_num: int = rule.init_token_num if rule.init_token_num else self._init_token_num
-            return await self._backend.redis_pool.eval(
+            result = await self._backend.redis_pool.eval(
                 self._lua_script,
                 keys=[key],
-                args=[int(time.time() * 1000), rule.gen_rate(), max_token, init_token_num]
+                args=[time.time(), rule.gen_rate(), max_token, init_token_num]
             )
-        
+            return result
+
         return await self._block_time_handle(key, rule, _can_requests)
 
     async def expected_time(self, key: str, rule: Rule) -> float:

@@ -8,7 +8,7 @@ from .base import BaseLimitBackend
 
 @dataclass
 class Bucket(object):
-    rate: int
+    rate: float
     token_num: int
     max_token_num: int
     block_time: float

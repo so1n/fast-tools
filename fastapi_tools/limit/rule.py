@@ -34,9 +34,9 @@ class Rule(object):
             seconds=self.second
         ).total_seconds()
 
-    def gen_rate(self) -> int:
+    def gen_rate(self) -> float:
         """
         gen_second: 60 gen_token: 1  = 1 req/m
         gen_second: 1  gen_token: 1000 = 1000 req/s = 1 req/ms
         """
-        return int(self.gen_token_num / self.gen_second())
+        return self.gen_token_num / self.gen_second()
