@@ -30,7 +30,7 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
                 return False
 
         can_requests = await func()
-        if not can_requests:
+        if not can_requests and bucket_block_time is not None:
             await self._backend.redis_pool.set(block_time_key, bucket_block_time, expire=bucket_block_time)
 
         return can_requests
@@ -41,10 +41,9 @@ class RedisFixedWindowBackend(BaseRedisBackend):
         async def _can_requests() -> bool:
             access_num: int = await self._backend.redis_pool.incr(key)
             if access_num == 1:
-                await self._backend.redis_pool.expire(key, rule.gen_rate())
+                await self._backend.redis_pool.expire(key, rule.gen_second())
 
-            max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
-            can_requests: bool = not access_num > max_token
+            can_requests: bool = not access_num > rule.gen_token_num
             return can_requests
 
         return await self._block_time_handle(key, rule, _can_requests)
@@ -55,12 +54,13 @@ class RedisFixedWindowBackend(BaseRedisBackend):
         if block_time:
             return await self._backend.redis_pool.ttl(block_time_key)
 
-        token_num = await self._backend.redis_pool.get(key)
+        token_num: Optional[str] = await self._backend.redis_pool.get(key)
         if token_num is None:
             return 0
+        else:
+            token_num: int = int(token_num)
 
-        max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
-        if token_num < max_token:
+        if token_num < rule.gen_token_num:
             return 0
         return await self._backend.redis_pool.ttl(key)
 

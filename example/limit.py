@@ -29,7 +29,7 @@ app.add_middleware(
 
 @app.get("/")
 @limit.limit(
-    [limit.Rule(second=10)],
+    [limit.Rule(second=10, gen_token_num=1)],
     limit.backend.RedisFixedWindowBackend(redis_helper),
     limit_func=limit.func.client_ip
 )
