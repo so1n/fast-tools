@@ -1,5 +1,7 @@
 import aioredis
 import asyncio
+
+from typing import Any, Dict
 from fastapi_tools.base import RedisHelper
 
 
@@ -9,9 +11,9 @@ async def test_redis_helper():
     )
     test_key: str = 'test_key'
     test_value: str = 'test_value'
+    test_dict_value: Dict[str, Any] = {test_key: test_value}
 
     value = await redis.execute('set', test_key, test_value)
-    print(value)
     assert value == 'OK'
 
     value = await redis.execute('get', test_key)
@@ -22,8 +24,9 @@ async def test_redis_helper():
         ('get', test_key),
         ('del', test_key)
     ])
-    print(value)
     assert isinstance(value, list)
+    await redis.set_dict(test_key, test_dict_value, 360)
+    assert test_dict_value == await redis.get_dict(test_key)
 
 
 asyncio.run(test_redis_helper())

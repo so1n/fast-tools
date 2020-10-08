@@ -1,5 +1,4 @@
 import time
-from typing import Optional
 
 import aioredis
 from fastapi import FastAPI
