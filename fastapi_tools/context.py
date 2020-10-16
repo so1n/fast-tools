@@ -34,7 +34,6 @@ class BaseContextHelper(object):
         return ctx_dict.get(self._key, _MISS_OBJECT)
 
     def _set_context(self, value):
-        print(self._key, value)
         ctx_dict: dict = _FASTAPI_TOOLS_CONTEXT.get()
         ctx_dict[self._key] = value
 

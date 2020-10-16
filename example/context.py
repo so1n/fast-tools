@@ -6,8 +6,11 @@
 """
 __author__ = 'so1n'
 __date__ = '2020-06'
-import uuid
+import asyncio
 import httpx
+import uuid
+from contextvars import copy_context
+from functools import partial
 from fastapi import FastAPI, Request, Response
 from fastapi_tools.context import ContextBaseModel
 from fastapi_tools.context import ContextMiddleware
@@ -39,8 +42,26 @@ class ContextModel(ContextBaseModel):
 app.add_middleware(ContextMiddleware, context_model=ContextModel())
 
 
+async def test_ensure_future():
+    print(f'test_ensure_future {ContextModel.http_client}')
+
+
+def test_run_in_executor():
+    print(f'test_run_in_executor {ContextModel.http_client}')
+
+
+def test_call_soon():
+    print(f'test_call_soon {ContextModel.http_client}')
+
+
 @app.get("/")
 async def root():
+    asyncio.ensure_future(test_ensure_future())
+    loop = asyncio.get_event_loop()
+
+    loop.call_soon(test_call_soon)
+    ctx = copy_context()
+    await loop.run_in_executor(None, partial(ctx.run, test_run_in_executor))
     return {
         "message": ContextModel.to_dict(is_safe_return=True),  # not return CustomQuery
         "local_ip": (await ContextModel.http_client.get('http://icanhazip.com')).text
