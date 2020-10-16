@@ -31,7 +31,7 @@ class ContextModel(ContextBaseModel):
     http_client: httpx.AsyncClient = CustomQuery(client)
 
 
-app.add_middleware(ContextMiddleware, context_model=ContextModel())
+app.add_middleware(ContextMiddleware, context_model=ContextModel)
 
 
 @app.get("/")
