@@ -11,7 +11,7 @@ from fastapi_tools.cache import (
 )
 
 
-app = FastAPI()
+app: 'FastAPI' = FastAPI()
 redis_helper: 'RedisHelper' = RedisHelper()
 
 

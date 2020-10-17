@@ -2,10 +2,18 @@
 # -*- coding: utf-8 -*-
 __author__ = 'so1n'
 __date__ = '2020-08'
-from fastapi import FastAPI, Depends, Header, Query
-from fastapi_tools.cbv import cbv_decorator, Cbv
+from fastapi import (
+    FastAPI,
+    Depends,
+    Header,
+    Query
+)
+from fastapi_tools.cbv import (
+    cbv_decorator,
+    Cbv
+)
 
-app = FastAPI()
+app: FastAPI = FastAPI()
 
 
 def get_user_agent(user_agent: str = Header("User-Agent")) -> str:
@@ -19,14 +27,14 @@ class TestCbv(object):
     def __init__(self, test_default_id: int = Query(123)):
         self.test_default_id = test_default_id
 
-    def _response(self):
+    def _response(self) -> dict:
         return {"message": "hello, world", "user_agent": self.user_agent, "host": self.host, "id": self.test_default_id}
 
     @cbv_decorator(status_code=203)
-    def get(self):
+    def get(self) -> dict:
         return self._response()
 
-    def post(self):
+    def post(self) -> dict:
         return self._response()
 
 

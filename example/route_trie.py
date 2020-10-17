@@ -1,16 +1,21 @@
+from typing import (
+    List,
+    Optional
+)
 from fastapi import FastAPI
+from starlette.routing import Route
 from fastapi_tools.base import RouteTrie
 
-app = FastAPI()
+app: 'FastAPI' = FastAPI()
 
 
 @app.get("/")
-async def root():
+async def root() -> dict:
     return {"Hello": "World"}
 
 
 @app.get("/api/users/login")
-async def user_login():
+async def user_login() -> str:
     return 'ok'
 
 
@@ -18,7 +23,7 @@ route_trie: RouteTrie = RouteTrie()
 route_trie.insert_by_app(app)
 
 
-def print_route(route_list):
+def print_route(route_list: Optional[List[Route]]):
     if route_list:
         for route in route_list:
             print(f'route:{route} url:{route.path}')

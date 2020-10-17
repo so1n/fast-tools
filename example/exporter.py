@@ -1,12 +1,15 @@
 from typing import Optional
 
 from fastapi import FastAPI
-from fastapi_tools.exporter import PrometheusMiddleware, get_metrics
+from fastapi_tools.exporter import (
+    get_metrics,
+    PrometheusMiddleware
+)
 from fastapi_tools.base import RouteTrie
 
 
-app = FastAPI()
-route_trie = RouteTrie()
+app: 'FastAPI' = FastAPI()
+route_trie: 'RouteTrie' = RouteTrie()
 
 app.add_middleware(
     PrometheusMiddleware,

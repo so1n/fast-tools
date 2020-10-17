@@ -1,7 +1,10 @@
 import aioredis
 import asyncio
 
-from typing import Any, Dict
+from typing import (
+    Any,
+    Dict
+)
 from fastapi_tools.base import RedisHelper
 
 

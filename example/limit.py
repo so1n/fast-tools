@@ -1,7 +1,13 @@
-from typing import Optional, Tuple
+from typing import (
+    Optional,
+    Tuple
+)
 
 import aioredis
-from fastapi import FastAPI, Request
+from fastapi import (
+    FastAPI,
+    Request
+)
 from fastapi_tools.base import RedisHelper
 from fastapi_tools import limit
 
@@ -10,7 +16,7 @@ def limit_func(requests: Request) -> Tuple[str, str]:
     return requests.session['user'], requests.session['group']
 
 
-app = FastAPI()
+app: 'FastAPI' = FastAPI()
 redis_helper: 'RedisHelper' = RedisHelper()
 
 
@@ -33,7 +39,7 @@ app.add_middleware(
     limit.backend.RedisFixedWindowBackend(redis_helper),
     limit_func=limit.func.client_ip
 )
-async def root():
+async def root() -> dict:
     return {"Hello": "World"}
 
 
@@ -55,7 +61,7 @@ async def read_user_item(
 
 
 @app.get("/api/users/login")
-async def user_login():
+async def user_login() -> str:
     return 'ok'
 
 

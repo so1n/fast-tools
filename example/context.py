@@ -9,15 +9,25 @@ __date__ = '2020-06'
 import asyncio
 import httpx
 import uuid
-from contextvars import copy_context
+from contextvars import (
+    copy_context,
+    Context
+)
 from functools import partial
-from fastapi import FastAPI, Request, Response
-from fastapi_tools.context import ContextBaseModel
-from fastapi_tools.context import ContextMiddleware
-from fastapi_tools.context import CustomHelper
-from fastapi_tools.context import HeaderHelper
+from fastapi import (
+    FastAPI,
+    Request,
+    Response
+)
+from fastapi_tools.context import (
+    ContextBaseModel,
+    ContextMiddleware,
+    CustomHelper,
+    HeaderHelper,
+)
 
-app = FastAPI()
+
+app: FastAPI = FastAPI()
 
 
 class ContextModel(ContextBaseModel):
@@ -57,10 +67,10 @@ def test_call_soon():
 @app.get("/")
 async def root():
     asyncio.ensure_future(test_ensure_future())
-    loop = asyncio.get_event_loop()
+    loop: 'asyncio.get_event_loop()' = asyncio.get_event_loop()
 
     loop.call_soon(test_call_soon)
-    ctx = copy_context()
+    ctx: Context = copy_context()
     await loop.run_in_executor(None, partial(ctx.run, test_run_in_executor))
     return {
         "message": ContextModel.to_dict(is_safe_return=True),  # not return CustomQuery

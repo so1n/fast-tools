@@ -5,14 +5,19 @@
 1.396694214876033
 """
 import time
+from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
-from starlette.routing import Route, Match
+from starlette.responses import (
+    JSONResponse,
+    Response
+)
+from starlette.routing import (
+    Route,
+    Match
+)
 from starlette.types import ASGIApp
-
-from starlette.applications import Starlette
 
 from fastapi_tools.base import RouteTrie
 
@@ -32,22 +37,22 @@ class TestMiddleware(BaseHTTPMiddleware):
 
         start_time: float = time.time()
         self._route_trie.search_by_scope(url_path, request.scope)
-        route_trie_speed_time =  time.time() - start_time
+        route_trie_speed_time: float = time.time() - start_time
 
         start_time: float = time.time()
         for route in request.app.routes:
             match, child_scope = route.matches(request.scope)
             if match == Match.FULL:
                 break
-        self_server_speed_time = time.time() - start_time
+        self_server_speed_time: float = time.time() - start_time
         return Response(content=str(self_server_speed_time/route_trie_speed_time))
 
 
-async def homepage(request):
+async def homepage(request: Request) -> JSONResponse:
     return JSONResponse({'hello': 'world'})
 
 
-route_trie = RouteTrie()
+route_trie: 'RouteTrie' = RouteTrie()
 
 
 app = Starlette(

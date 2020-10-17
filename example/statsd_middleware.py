@@ -1,13 +1,16 @@
 from typing import Optional
 
 from fastapi import FastAPI
-from fastapi_tools.statsd_middleware import StatsdClient, StatsdMiddleware
+from fastapi_tools.statsd_middleware import (
+    StatsdClient,
+    StatsdMiddleware
+)
 from fastapi_tools.base import RouteTrie
 
 
-app = FastAPI()
-client = StatsdClient()
-route_trie = RouteTrie()
+app: 'FastAPI' = FastAPI()
+client: 'StatsdClient' = StatsdClient()
+route_trie: 'RouteTrie' = RouteTrie()
 
 app.add_middleware(
     StatsdMiddleware,
@@ -26,14 +29,14 @@ async def startup_event():
 
 
 @app.get("/")
-async def root():
+async def root() -> dict:
     return {"Hello": "World"}
 
 
 @app.get("/api/users/{user_id}/items/{item_id}")
 async def read_user_item(
     user_id: int, item_id: str, q: Optional[str] = None, short: bool = False
-):
+) -> dict:
     """
     copy from:https://fastapi.tiangolo.com/tutorial/query-params/#multiple-path-and-query-parameters
     """
@@ -48,7 +51,7 @@ async def read_user_item(
 
 
 @app.get("/api/users/login")
-async def user_login():
+async def user_login() -> str:
     return 'ok'
 
 

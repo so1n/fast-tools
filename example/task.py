@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi_tools.task import background_task
 from fastapi_tools.task import stop_task
 
-app = FastAPI()
+app: 'FastAPI' = FastAPI()
 
 
 @app.on_event("startup")
