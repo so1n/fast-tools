@@ -87,7 +87,7 @@ def print_route(route_list: Optional[List[Route]]):
 print_route(route_trie.search('/'))
 print_route(route_trie.search('/api/users/login'))
 ```
-简单的检查自带的路由匹配与前缀树匹配效率差
+[简单的对比自带的路由匹配与前缀树匹配效率差](https://github.com/so1n/fast-tools/blob/master/example/route_trie_simple_benchmarks.py)
 ## 1.exporter
 - 说明: 一个可用于 `Starlette` 和 `FastAPI`的prometheus exporter中间件,可以监控各个url的状态`, 如连接次数,响应次数,请求时间,错误次数,当前请求数.
 - 适用框架: `FastApi`,`Starlette`
@@ -188,9 +188,9 @@ class MyConfig(Config):
     YML_TEST_LIST_INT: Optional[List[int]] = None
 ```
 config支持如下参数:
-    - config_file: 配置文件,支持ini和yml文件,如果没填写则从环境变量中拉取数据(不过只拉取了一个全局字典), 具体可以见[example](https://github.com/so1n/fast-tools/tree/master/example/config)
-    - group: group可以指定一个配置分组.在使用ini和yml文件时,支持多个分组配置,如dev配置和test配置.如果你不想在代码中配置该选项,可以直接在环境变量中配置group=test
-    - global_key: 指定那个分组为全局配置.在使用ini和yml文件时, 支持多个分组配置,同时也有一个全局配置, 该配置可以被多个分组共享(如果该分组没有对应的配置,则会引用到global_key的配置,如果有则不引用)
+- config_file: 配置文件,支持ini和yml文件,如果没填写则从环境变量中拉取数据(不过只拉取了一个全局字典), 具体可以见[example](https://github.com/so1n/fast-tools/tree/master/example/config)
+- group: group可以指定一个配置分组.在使用ini和yml文件时,支持多个分组配置,如dev配置和test配置.如果你不想在代码中配置该选项,可以直接在环境变量中配置group=test
+- global_key: 指定那个分组为全局配置.在使用ini和yml文件时, 支持多个分组配置,同时也有一个全局配置, 该配置可以被多个分组共享(如果该分组没有对应的配置,则会引用到global_key的配置,如果有则不引用)
 具体使用方法见[example](https://github.com/so1n/fastapi-tools/blob/master/example/config/__init__.py)
 ## 4.context
 - 说明:context利用`contextvars`的特性,调用者可以像flask一样在路由中方便的调用自己需要的东西,而不需要像requests.app.state去调用.而且利用`contextvars`还可以支持type hints,方便重构和编写工程化代码..同时context把`contextvars`的使用方法封装起来,调用者只需要引入context.ContextMiddleware和context.ContextBaseModel即可
@@ -310,7 +310,7 @@ app.add_middleware(
     StatsdMiddleware,
     client=client,
     route_trie=route_trie,
-    url_replace_handle=lambda url: url.replace('/', '_'),  # metric命名不支持'/'符合
+    url_replace_handle=lambda url: url.replace('/', '_'),  # metric命名不支持'/'符号
     block_url_set={"/"}
 )
 app.on_event("shutdown")(client.close)
@@ -382,7 +382,7 @@ if __name__ == '__main__':
 ## 7.cache
 - 说明: 利用函数的return type hint, 自适应的缓存对应的响应,并在下次请求且缓存时间未过期时,返回缓存数据. 
 - 适用框架: `FastApi`,`Starlette`
-- PS 之所以使用return type hint判断,而不是根据数据进行判断,是可以减少判断次数,有IDE编写代码时,返回响应会跟return type hint一样
+- PS: 之所以使用return type hint判断,而不是根据数据进行判断,是可以减少判断次数,有IDE编写代码时,返回响应会跟return type hint一样
 ```python
 import time
 
