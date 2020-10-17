@@ -1,11 +1,11 @@
 from typing import Optional
 
 from fastapi import FastAPI
-from fastapi_tools.statsd_middleware import (
+from fast_tools.statsd_middleware import (
     StatsdClient,
     StatsdMiddleware
 )
-from fastapi_tools.base import RouteTrie
+from fast_tools.base import RouteTrie
 
 
 app: 'FastAPI' = FastAPI()

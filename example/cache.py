@@ -4,8 +4,8 @@ import aioredis
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
-from fastapi_tools.base import RedisHelper
-from fastapi_tools.cache import (
+from fast_tools.base import RedisHelper
+from fast_tools.cache import (
     cache,
     cache_control
 )

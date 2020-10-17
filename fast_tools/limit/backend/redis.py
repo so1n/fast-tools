@@ -2,9 +2,9 @@ import time
 from abc import ABC
 from typing import Awaitable, Callable, List, Optional
 
-from fastapi_tools.base.redis_helper import RedisHelper
-from fastapi_tools.limit.backend.base import BaseLimitBackend
-from fastapi_tools.limit.rule import Rule
+from fast_tools.base.redis_helper import RedisHelper
+from fast_tools.limit.backend.base import BaseLimitBackend
+from fast_tools.limit.rule import Rule
 
 
 class BaseRedisBackend(BaseLimitBackend, ABC):

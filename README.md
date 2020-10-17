@@ -14,8 +14,8 @@ pip install prometheus_client
 from typing import Optional
 
 from fastapi import FastAPI
-from fastapi_tools.exporter import PrometheusMiddleware, get_metrics
-from fastapi_tools.base.route_trie import RouteTrie
+from fast_tools.exporter import PrometheusMiddleware, get_metrics
+from fast_tools.base.route_trie import RouteTrie
 
 
 app = FastAPI()
@@ -40,7 +40,7 @@ My cbv reuses its core code and make some change.can use cbv like `Starlette` an
 __author__ = 'so1n'
 __date__ = '2020-08'
 from fastapi import FastAPI, Depends, Header, Query
-from fastapi_tools.cbv import cbv_decorator, Cbv
+from fast_tools.cbv import cbv_decorator, Cbv
 
 app = FastAPI()
 
@@ -87,10 +87,10 @@ __date__ = '2020-06'
 import uuid
 import httpx
 from fastapi import FastAPI
-from fastapi_tools.context import ContextBaseModel
-from fastapi_tools.context import ContextMiddleware
-from fastapi_tools.context import CustomQuery
-from fastapi_tools.context import HeaderQuery
+from fast_tools.context import ContextBaseModel
+from fast_tools.context import ContextMiddleware
+from fast_tools.context import CustomQuery
+from fast_tools.context import HeaderQuery
 
 app = FastAPI()
 client = httpx.AsyncClient()
@@ -133,7 +133,7 @@ Python's web framework uses traversal matching to implement route lookup. If you
 The prefix tree reconstructs the route search, which can quickly find the route in the middleware and improve the query speed
 ```Python
 from fastapi import FastAPI
-from fastapi_tools.base.route_trie import RouteTrie
+from fast_tools.base.route_trie import RouteTrie
 
 app = FastAPI()
 
@@ -174,8 +174,8 @@ pip install aiostatsd
 from typing import Optional
 
 from fastapi import FastAPI
-from fastapi_tools.statsd_middleware import StatsdClient, StatsdMiddleware
-from fastapi_tools.base.route_trie import RouteTrie
+from fast_tools.statsd_middleware import StatsdClient, StatsdMiddleware
+from fast_tools.base.route_trie import RouteTrie
 
 
 app = FastAPI()
@@ -234,8 +234,8 @@ The ideal architecture does not need to use `task`, so `task` is not recommended
 ```python
 import time
 from fastapi import FastAPI
-from fastapi_tools.task import background_task
-from fastapi_tools.task import stop_task
+from fast_tools.task import background_task
+from fast_tools.task import stop_task
 
 app = FastAPI()
 

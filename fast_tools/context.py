@@ -11,7 +11,7 @@ from starlette.responses import Response
 
 
 _CAN_JSON_TYPE_SET: Set[type] = {bool, dict, float, int, list, str, tuple, type(None)}
-_NAMESPACE: str = 'fastapi_tools'
+_NAMESPACE: str = 'fast_tools'
 _CONTEXT_KEY_SET: Set[str] = set()
 _CONTEXT_DICT_TYPE: type = Dict[str, Any]
 _FASTAPI_TOOLS_CONTEXT: ContextVar[Dict[str, Any]] = ContextVar(f"{_NAMESPACE}_context", default={})

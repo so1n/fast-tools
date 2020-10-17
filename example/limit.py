@@ -8,8 +8,8 @@ from fastapi import (
     FastAPI,
     Request
 )
-from fastapi_tools.base import RedisHelper
-from fastapi_tools import limit
+from fast_tools.base import RedisHelper
+from fast_tools import limit
 
 
 def limit_func(requests: Request) -> Tuple[str, str]:

@@ -1,7 +1,7 @@
 import time
 from fastapi import FastAPI
-from fastapi_tools.task import background_task
-from fastapi_tools.task import stop_task
+from fast_tools.task import background_task
+from fast_tools.task import stop_task
 
 app: 'FastAPI' = FastAPI()
 

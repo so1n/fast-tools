@@ -6,7 +6,7 @@ from functools import wraps
 from typing import Any, Callable, Awaitable, Dict, List, Optional, Type
 
 from starlette.responses import Response, JSONResponse
-from fastapi_tools.base import RedisHelper
+from fast_tools.base import RedisHelper
 
 
 def _check_typing_type(_type, origin_name: str) -> bool:
@@ -24,7 +24,7 @@ async def cache_control(response: Response, backend: 'RedisHelper', key: str):
 def cache(
     backend: 'RedisHelper',
     expire: int = None,
-    namespace: str = "fastapi-tools",
+    namespace: str = "fast-tools",
     json_response: Type[JSONResponse] = JSONResponse,
     after_cache_response_list: Optional[List[Callable[[Response, 'RedisHelper', str], Awaitable]]] = None,
 ):

@@ -1,11 +1,11 @@
 from typing import Optional
 
 from fastapi import FastAPI
-from fastapi_tools.exporter import (
+from fast_tools.exporter import (
     get_metrics,
     PrometheusMiddleware
 )
-from fastapi_tools.base import RouteTrie
+from fast_tools.base import RouteTrie
 
 
 app: 'FastAPI' = FastAPI()

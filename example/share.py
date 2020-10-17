@@ -1,7 +1,7 @@
 import asyncio
 import time
 from typing import Coroutine, List
-from fastapi_tools.share import Share
+from fast_tools.share import Share
 
 
 async def delay_print(duration: int) -> int:

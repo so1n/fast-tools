@@ -1,28 +1,35 @@
-# fastapi-tools
-一个fastapi的工具集,可以更方便的使用fastapi
+# fast-tools
+`fast-tools`是一个`FastApi/Starlette`的工具集, 大部分工具都可用于FastApi/Starlette, 少部工具只支持`FastApi`是分为了兼容`FastApi`的不足
+
+```python
+# 名字由来
+project_name = ('FastApi'[:2] + 'Starlette'[:2]).lower() + '-tools'
+print(project_name)  # 'fast-tools'
+```
 # Usage
 ## 0.base
-说明:FastAPI的一些工具的依赖,也可用于web框架
-适用框架:`FastApi`,`Starlette`, more....
+- 说明:`fast-tools`的一些工具的依赖,也可单独使用
+- 适用框架:`FastApi`,`Starlette`, more....
 ### 0.1.redis_helper
-用于对aioredis的conn pool封装,以及对一些常用命令进行封装.
-使用方法:
+- 说明: 用于对aioredis的conn pool封装,以及对一些常用命令进行封装.
 ```python
 import aioredis
 from fastapi import FastAPI
-from fastapi_tools.base import RedisHelper
+from fast_tools.base import RedisHelper
 
 
 app = FastAPI()
-redis_helper: 'RedisHelper' = RedisHelper()
+redis_helper: 'RedisHelper' = RedisHelper()  # 初始化对象
 
 
 @app.on_event("startup")
 async def startup():
+    # 创建redis连接池并链接
     redis_helper.init(await aioredis.create_pool('redis://localhost', minsize=1, maxsize=10, encoding='utf-8'))
 
 app.on_event("shutdown")
 async def shutdown():
+    # 关闭redis连接池
     await redis_helper.close()
 
 
@@ -36,13 +43,15 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ### 0.2.route_trie
-python的web框架为了支持`/api/user/{user_id}`的写法都是先遍历路由,并逐一检查是否符合正则规则,符合条件才返回路由.
-可以发现每次路由查找的时间复杂度是O(n), 不过我们的在web项目中url数量不多,平时很难发现这个路由匹配会降低响应速度(100个url内查询速度并不会特别的慢).
-但url数量变多或者在实现一些需要得知url的中间件时,还需要再匹配一次,那效率就很慢了.
-如果改为dict再进行路由匹配,虽然速度很快,但是却不支持上述所说的url,所以使用前缀树重构了路由查找,可以尽快的匹配到路由的大致区域,再进行正则匹配,检查路由是否正确.
+python的大多数web框架的路由查找都是遍历整个路由表,如果当前url与路由的注册url正则匹配则查找成功.可以发现发次路由查找的时间复杂度为O(n). 
+猜测之所以用遍历路由表的方法,一个是为了简单,还有就是为了支持`/api/user/{user_id}`的写法.
+可以发现每次路由查找的时间复杂度是O(n), 当路由数量达到一定的程度后,匹配时间就变慢了, 但我们在使用中间件时,如果需要检查是否匹配到路由,那就需要再匹配一次,而这块我们的可以控制的,所以需要优化这里的路由匹配速度.
+
+最快路由匹配速度是dict,但是无法支持类似于`/api/user/{user_id}`的写法,只能另寻他路,好在url天生跟前缀树匹配,所以使用前缀树重构了路由查找,可以尽快的匹配到路由的大致区域,再进行正则匹配,检查路由是否正确.
+
 ```Python
 from fastapi import FastAPI
-from fastapi_tools.base.route_trie import RouteTrie
+from fast_tools.base.route_trie import RouteTrie
 
 app = FastAPI()
 
@@ -69,22 +78,22 @@ def print_route(route_list):
         print(f'route:{route_list} url: not found')
 
 
-# regex url should use scope param, can learn more in exporter example
 # 普通的search类似于从dict中调用get 
 # 在中间件中可以调用route_trie.search_by_scope
 print_route(route_trie.search('/'))
 print_route(route_trie.search('/api/users/login'))
 ```
+简单的检查自带的路由匹配与前缀树匹配效率差
 ## 1.exporter
-说明: 一个可用于 `Starlette` 和 `FastAPI`的prometheus exporter中间件,可以监控各个url的状态`.
-适用框架: `FastApi`,`Starlette`
+- 说明: 一个可用于 `Starlette` 和 `FastAPI`的prometheus exporter中间件,可以监控各个url的状态`.
+- 适用框架: `FastApi`,`Starlette`
 ### 1.1 安装
 pip install prometheus_client
 ### 1.2 使用
 ```python
 from fastapi import FastAPI
-from fastapi_tools.exporter import PrometheusMiddleware, get_metrics
-from fastapi_tools.base.route_trie import RouteTrie
+from fast_tools.exporter import PrometheusMiddleware, get_metrics
+from fast_tools.base.route_trie import RouteTrie
 
 
 app = FastAPI()
@@ -101,16 +110,16 @@ app.add_route("/metrics", get_metrics)  # 添加metrics的相关url,方便promet
 ### 1.3 example
 更多代码请看[example](https://github.com/so1n/fastapi-tools/blob/master/example/exporter.py)
 ## 2.cbv
-说明:由于fastapi的改动,目前尚未支持cbv模式,只有一个[工具](https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py) 
+- 说明:由于fastapi的改动,目前尚未支持cbv模式,只有[fastapi_utils](https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py) 
 提供了cbv的支持, 但觉得使用起来不是很方便,所以复用了它的核心代码,并做出了一些修改,可以像`Starlette`使用cbv,同时提供`cbv_decorator`来支持fastapi的其他功能.
-适用框架: `FastApi`
+- 适用框架: `FastApi`
 ```python
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 __author__ = 'so1n'
 __date__ = '2020-08'
 from fastapi import FastAPI, Depends, Header, Query
-from fastapi_tools.cbv import cbv_decorator, Cbv
+from fast_tools.cbv import cbv_decorator, Cbv
 
 app = FastAPI()
 
@@ -148,11 +157,11 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 3.config
-说明:config提供一个从文件转换为python对象的配置. 基于`Pydantic`和Type Hints, config可以在不需要使用大量的代码量下实现快速转换或检验参数.
-适用框架: `FastApi`,`Starlette`
+- 说明:config提供一个从文件转换为python对象的配置. 基于`Pydantic`和Type Hints, config可以在不需要使用大量的代码量下实现快速转换或检验参数.
+- 适用框架: `FastApi`,`Starlette`
 ```python
 from typing import List, Optional
-from fastapi_tools.config import Config
+from fast_tools.config import Config
 
 from pydantic.fields import Json
 
@@ -180,8 +189,8 @@ config支持如下参数:
     - global_key: 指定那个分组为全局配置.在使用ini和yml文件时, 支持多个分组配置,同时也有一个全局配置, 该配置可以被多个分组共享(如果该分组没有对应的配置,则会引用到global_key的配置,如果有则不引用)
 具体使用方法见[example](https://github.com/so1n/fastapi-tools/blob/master/example/config/__init__.py)
 ## 4.context
-说明:context利用`contextvars`的特性,调用者可以像flask一样在路由中方便的调用自己需要的东西,而不需要像requests.app.state去调用.
-而且利用`contextvars`还可以支持type hints,方便重构和编写工程化代码.
+- 说明:context利用`contextvars`的特性,调用者可以像flask一样在路由中方便的调用自己需要的东西,而不需要像requests.app.state去调用.
+- 而且利用`contextvars`还可以支持type hints,方便重构和编写工程化代码.
 同时context把`contextvars`的使用方法封装起来,调用者只需要引入context.ContextMiddleware和context.ContextBaseModel即可
 适用框架: `FastApi`,`Starlette`
 ```python
@@ -190,10 +199,10 @@ __date__ = '2020-06'
 import uuid
 import httpx
 from fastapi import FastAPI
-from fastapi_tools.context import ContextBaseModel
-from fastapi_tools.context import ContextMiddleware
-from fastapi_tools.context import CustomQuery
-from fastapi_tools.context import HeaderQuery
+from fast_tools.context import ContextBaseModel
+from fast_tools.context import ContextMiddleware
+from fast_tools.context import CustomQuery
+from fast_tools.context import HeaderQuery
 
 app = FastAPI()
 client = httpx.AsyncClient()
@@ -232,16 +241,16 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 5.statsd_middleware
-说明:使用方法类似于exporter, 不过多了个`url_replace_handle`来处理url
-适用框架: `FastApi`,`Starlette`
+- 说明:使用方法类似于exporter, 不过多了个`url_replace_handle`来处理metric中带有.的问题
+- 适用框架: `FastApi`,`Starlette`
 ### 5.1安装
 pip install aiostatsd
 ```python
 from typing import Optional
 
 from fastapi import FastAPI
-from fastapi_tools.statsd_middleware import StatsdClient, StatsdMiddleware
-from fastapi_tools.base.route_trie import RouteTrie
+from fast_tools.statsd_middleware import StatsdClient, StatsdMiddleware
+from fast_tools.base.route_trie import RouteTrie
 
 
 app = FastAPI()
@@ -296,13 +305,13 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 6.task
-说明:理想中的架构是不需要使用到`task`的,所以不推荐使用`task`,但在架构初期中可能会用到...
-适用框架: `FastApi`,`Starlette`
+- 说明:理想中的架构是不需要使用到`task`的,所以不推荐使用`task`,但在架构初期中可能会用到...
+- 适用框架: `FastApi`,`Starlette`
 ```python
 import time
 from fastapi import FastAPI
-from fastapi_tools.task import background_task
-from fastapi_tools.task import stop_task
+from fast_tools.task import background_task
+from fast_tools.task import stop_task
 
 app = FastAPI()
 
@@ -322,8 +331,8 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 7.cache
-说明: 利用函数的return type hint, 自适应的缓存对应的响应,并在下次请求且缓存时间未过期时,返回缓存数据. 
-适用框架: `FastApi`,`Starlette`
+- 说明: 利用函数的return type hint, 自适应的缓存对应的响应,并在下次请求且缓存时间未过期时,返回缓存数据. 
+- 适用框架: `FastApi`,`Starlette`
 ```python
 import time
 
@@ -331,8 +340,8 @@ import aioredis
 from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
-from fastapi_tools.base import RedisHelper
-from fastapi_tools.cache import (
+from fast_tools.base import RedisHelper
+from fast_tools.cache import (
     cache,
     cache_control
 )
@@ -379,17 +388,17 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 8.limit
-说明: 利用常见的限流算法对请求进行限流,并支持不同的用户分组有不同的限流规则.
+- 说明: 利用常见的限流算法对请求进行限流,并支持不同的用户分组有不同的限流规则.
 支持装饰器为单一函数或者使用中间件对符合url规则的请求进行限流.
 backend支持基于内存的令牌桶以及基于redis的令牌桶,cell模块,和窗口限流
-适用框架: `FastApi`,`Starlette`
+- 适用框架: `FastApi`,`Starlette`
 ```python
 from typing import Optional, Tuple
 
 import aioredis
 from fastapi import FastAPI, Request
-from fastapi_tools.base import RedisHelper
-from fastapi_tools import limit
+from fast_tools.base import RedisHelper
+from fast_tools import limit
 
 
 def limit_func(requests: Request) -> Tuple[str, str]:

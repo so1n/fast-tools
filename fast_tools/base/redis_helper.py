@@ -16,7 +16,7 @@ class RedisHelper(object):
     def __init__(
             self,
             conn_pool: Optional['ConnectionsPool'] = None,
-            namespace: str = 'fastapi-tools',
+            namespace: str = 'fast-tools',
     ):
         self._namespace: str = namespace
         self._conn_pool: Optional['ConnectionsPool'] = None

@@ -14,7 +14,7 @@ example run output:
 ]
 """
 from typing import List, Optional
-from fastapi_tools.config import Config
+from fast_tools.config import Config
 
 from pydantic.fields import Json
 

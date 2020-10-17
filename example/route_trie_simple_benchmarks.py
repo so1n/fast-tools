@@ -19,7 +19,7 @@ from starlette.routing import (
 )
 from starlette.types import ASGIApp
 
-from fastapi_tools.base import RouteTrie
+from fast_tools.base import RouteTrie
 
 
 class TestMiddleware(BaseHTTPMiddleware):

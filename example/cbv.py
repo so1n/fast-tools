@@ -8,7 +8,7 @@ from fastapi import (
     Header,
     Query
 )
-from fastapi_tools.cbv import (
+from fast_tools.cbv import (
     cbv_decorator,
     Cbv
 )

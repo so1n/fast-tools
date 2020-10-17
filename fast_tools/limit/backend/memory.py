@@ -2,7 +2,7 @@ import time
 import threading
 from dataclasses import dataclass
 from typing import Dict, Optional
-from fastapi_tools.limit.rule import Rule
+from fast_tools.limit.rule import Rule
 from .base import BaseLimitBackend
 
 

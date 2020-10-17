@@ -5,7 +5,7 @@ from typing import (
     Any,
     Dict
 )
-from fastapi_tools.base import RedisHelper
+from fast_tools.base import RedisHelper
 
 
 async def test_redis_helper():

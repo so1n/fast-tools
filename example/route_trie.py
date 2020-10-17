@@ -4,7 +4,7 @@ from typing import (
 )
 from fastapi import FastAPI
 from starlette.routing import Route
-from fastapi_tools.base import RouteTrie
+from fast_tools.base import RouteTrie
 
 app: 'FastAPI' = FastAPI()
 

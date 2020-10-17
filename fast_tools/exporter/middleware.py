@@ -8,15 +8,15 @@ from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
-from fastapi_tools.base import RouteTrie
+from fast_tools.base import RouteTrie
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
     def __init__(
             self,
             app: ASGIApp,
-            app_name: str = 'fastapi_tools',
-            prefix: str = 'fastapi_tools',
+            app_name: str = 'fast_tools',
+            prefix: str = 'fast_tools',
             route_trie: Optional['RouteTrie'] = None,
             block_url_set: Optional[Set[str]] = None
     ) -> None:

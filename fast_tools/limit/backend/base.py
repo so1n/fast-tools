@@ -1,4 +1,4 @@
-from fastapi_tools.limit.rule import Rule
+from fast_tools.limit.rule import Rule
 
 
 class BaseLimitBackend(object):

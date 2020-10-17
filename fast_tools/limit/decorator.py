@@ -4,10 +4,10 @@ from typing import Awaitable, Callable, List, Optional, Union
 
 from starlette.requests import Request
 from starlette.responses import Response
-from fastapi_tools.limit.rule import Rule
-from fastapi_tools.limit.backend.base import BaseLimitBackend
-from fastapi_tools.limit.backend.memory import TokenBucket
-from fastapi_tools.limit.util import (
+from fast_tools.limit.rule import Rule
+from fast_tools.limit.backend.base import BaseLimitBackend
+from fast_tools.limit.backend.memory import TokenBucket
+from fast_tools.limit.util import (
     DEFAULT_CONTENT,
     DEFAULT_STATUS_CODE,
     RULE_FUNC_TYPE
