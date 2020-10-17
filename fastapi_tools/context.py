@@ -1,7 +1,7 @@
 import logging
 import traceback
 from contextvars import ContextVar, Token
-from typing import Any, Callable, Dict, Optional, Set, Type, get_type_hints
+from typing import Any, Callable, Coroutine, Dict, Optional, Set, Type, get_type_hints
 
 from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -90,6 +90,9 @@ class ContextBaseModel(object):
     async def before_request(self, request: Request):
         pass
 
+    async def after_response(self, request: Request, response: Response):
+        pass
+
     async def before_reset_context(self, request: Request, response: Response):
         pass
 
@@ -100,21 +103,24 @@ class ContextMiddleware(BaseHTTPMiddleware):
         super().__init__(*args, **kwargs)
         self.context_model: ContextBaseModel = context_model
 
+    @staticmethod
+    async def _safe_context_life_handle(corn: Coroutine):
+        try:
+            await corn
+        except Exception as e:
+            logging.error(f'{corn.__name__} error:{e} traceback info:{traceback.format_exc()}')
+
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         context_dict: _CONTEXT_DICT_TYPE = {_REQUEST_KEY: request}
         token: Token = _FASTAPI_TOOLS_CONTEXT.set(context_dict)
-        try:
-            await self.context_model.before_request(request)
-        except Exception as e:
-            logging.error(f'before_request error:{e} traceback info:{traceback.format_exc()}')
+
+        await self._safe_context_life_handle(self.context_model.before_request(request))
 
         response: Optional[Response] = None
         try:
             response = await call_next(request)
+            await self._safe_context_life_handle(self.context_model.before_request(request))
             return response
         finally:
-            try:
-                await self.context_model.before_reset_context(request, response)
-            except Exception as e:
-                logging.error(f'before_reset_context error:{e} traceback info:{traceback.format_exc()}')
+            await self._safe_context_life_handle(self.context_model.before_reset_context(request, response))
             _FASTAPI_TOOLS_CONTEXT.reset(token)
