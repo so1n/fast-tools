@@ -1,4 +1,4 @@
-# fastapi-tools
+# fast-tools
 `fast-tools` is a `FastApi/Starlette` toolset, Most of the tools can be used in FastApi/Starlette, a few tools only support `FastApi` which is divided into the lack of compatibility with `FastApi` 
 
 Note: this is alpha quality code still, the API may change, and things may fall apart while you try it.
@@ -198,7 +198,8 @@ config supports the following parameters:
 - config_file: config file,Support ini and yml config files, f the value is empty, data is pulled from environment variables (but only a global dictionary is pulled), see [example](https://github.com/so1n/fast-tools/tree/master/example /config)
 - group: group can specify a configuration group. When using ini and yml files, multiple group configurations are supported, such as dev configuration and test configuration. If you don't want to configure this option in the code, you can directly configure group=test in the environment variable.
 - global_key: Specify that group as the global configuration. When using ini and yml files, multiple group configurations are supported, and there is also a global configuration, which can be shared by multiple groups (if the group does not have a corresponding configuration, it will be referenced to the global_key Configuration, if there is no reference) 
-具体使用方法见[example](https://github.com/so1n/fastapi-tools/blob/master/example/config/__init__.py)
+
+see [example](https://github.com/so1n/fastapi-tools/blob/master/example/config/__init__.py)
 ## 4.context
 - explanation:Using the characteristics of `contextvars`, you can conveniently call what you need in the route, without the need to call like requests.app.state, and it can also support type hints to facilitate writing code.
 - applicable framework: `FastApi`,`Starlette`
@@ -230,8 +231,6 @@ client = httpx.AsyncClient()
 
 class ContextModel(ContextBaseModel):
     # ContextBaseModel  save data to contextvars
-    # HeaderQuery  extract data from header and set to ContextBaseModel
-    # CustomQuery  Used to store the instance in ContextBaseModel
     request_id: str = HeaderHelper(
         'X-Request-Id',
         default_func=lambda request: str(uuid.uuid4())
@@ -317,7 +316,7 @@ app.add_middleware(
     StatsdMiddleware,
     client=client,
     route_trie=route_trie,
-    url_replace_handle=lambda url: url.replace('/', '_'), Metric naming does not support'/' symbol
+    url_replace_handle=lambda url: url.replace('/', '_'), # Metric naming does not support'/' symbol
     block_url_set={"/"}
 )
 app.on_event("shutdown")(client.close)
