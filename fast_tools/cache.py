@@ -32,15 +32,14 @@ def cache(
         @wraps(func)
         async def return_dict_handle(*args, **kwargs):
             key: str = f'{namespace}:{func.__name__}:{args}:{kwargs}'
-            ret: Dict[str, Any] = await backend.get_dict(key)
-            if ret is not None:
-                response: Response = json_response(ret)
-                for after_cache_response in after_cache_response_list:
-                    await after_cache_response(response, backend, key)
-                return response
 
-            # TODO replace `share`
             while True:
+                ret: Dict[str, Any] = await backend.get_dict(key)
+                if ret is not None:
+                    response: Response = json_response(ret)
+                    for after_cache_response in after_cache_response_list:
+                        await after_cache_response(response, backend, key)
+                    return response
                 async with backend.lock(key+':lock') as lock:
                     if not lock:
                         ret = await func(*args, **kwargs)
@@ -52,15 +51,15 @@ def cache(
         @wraps(func)
         async def return_response_handle(*args, **kwargs):
             key: str = f'{namespace}:{func.__name__}:{args}:{kwargs}'
-            ret: Dict[str, Any] = await backend.get_dict(key)
-            if ret is not None:
-                response: Response = return_annotation(**ret)
-                for after_cache_response in after_cache_response_list:
-                    await after_cache_response(response, backend, key)
-                return response
 
-            # TODO replace `share`
             while True:
+                ret: Dict[str, Any] = await backend.get_dict(key)
+                if ret is not None:
+                    response: Response = return_annotation(**ret)
+                    for after_cache_response in after_cache_response_list:
+                        await after_cache_response(response, backend, key)
+                    return response
+
                 async with backend.lock(key + ':lock') as lock:
                     if not lock:
                         resp: Response = await func(*args, **kwargs)

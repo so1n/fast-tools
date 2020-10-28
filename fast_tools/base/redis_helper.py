@@ -56,7 +56,7 @@ class RedisHelper(object):
         key: str = f"{self._namespace}:lock:{name}:{today_string}"
         try:
             lock = await self.execute('set', key, '1', 'ex', timeout, 'nx')
-            if lock == 1:
+            if lock == 'ok':
                 lock = True
             else:
                 lock = False
