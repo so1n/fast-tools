@@ -11,23 +11,19 @@ from starlette.types import ASGIApp
 from fast_tools.limit.backend.base import BaseLimitBackend
 from fast_tools.limit.backend.memory import TokenBucket
 from fast_tools.limit.rule import Rule
-from fast_tools.limit.util import (
-    DEFAULT_CONTENT,
-    DEFAULT_STATUS_CODE,
-    RULE_FUNC_TYPE
-)
+from fast_tools.limit.util import DEFAULT_CONTENT, DEFAULT_STATUS_CODE, RULE_FUNC_TYPE
 
 
 class LimitMiddleware(BaseHTTPMiddleware):
     def __init__(
-            self,
-            app: ASGIApp,
-            *,
-            backend: BaseLimitBackend = TokenBucket(),
-            status_code: int = DEFAULT_STATUS_CODE,
-            content: str = DEFAULT_CONTENT,
-            func: Optional[RULE_FUNC_TYPE] = None,
-            rule_dict: Dict[str, Rule] = None
+        self,
+        app: ASGIApp,
+        *,
+        backend: BaseLimitBackend = TokenBucket(),
+        status_code: int = DEFAULT_STATUS_CODE,
+        content: str = DEFAULT_CONTENT,
+        func: Optional[RULE_FUNC_TYPE] = None,
+        rule_dict: Dict[str, Rule] = None,
     ) -> None:
         super().__init__(app)
         self._backend: BaseLimitBackend = backend
@@ -36,8 +32,7 @@ class LimitMiddleware(BaseHTTPMiddleware):
         self._status_code: int = status_code
 
         self._rule_dict: Dict[re.Pattern[str], List[Rule]] = {
-            re.compile(key): value
-            for key, value in rule_dict.items()
+            re.compile(key): value for key, value in rule_dict.items()
         }
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:

@@ -8,21 +8,20 @@ from fast_tools.limit.rule import Rule
 
 
 class BaseRedisBackend(BaseLimitBackend, ABC):
-
     def __init__(
-            self,
-            backend: 'RedisHelper',
-            init_token_num: Optional[int] = None,
-            block_time: Optional[int] = None,
-            max_token_num: int = 100
+        self,
+        backend: "RedisHelper",
+        init_token_num: Optional[int] = None,
+        block_time: Optional[int] = None,
+        max_token_num: int = 100,
     ):
         self._init_token_num: int = init_token_num if init_token_num else max_token_num
         self._max_token_num: int = max_token_num
         self._block_time: Optional[int] = block_time
-        self._backend: 'RedisHelper' = backend
+        self._backend: "RedisHelper" = backend
 
     async def _block_time_handle(self, key: str, rule: Rule, func: Callable[..., Awaitable[bool]]):
-        block_time_key: str = key + f':block_time'
+        block_time_key: str = key + f":block_time"
         bucket_block_time: int = rule.block_time if rule.block_time is not None else self._block_time
 
         if bucket_block_time is not None:
@@ -49,7 +48,7 @@ class RedisFixedWindowBackend(BaseRedisBackend):
         return await self._block_time_handle(key, rule, _can_requests)
 
     async def expected_time(self, key: str, rule: Rule) -> float:
-        block_time_key: str = key + ':block_time'
+        block_time_key: str = key + ":block_time"
         block_time = await self._backend.redis_pool.get(block_time_key)
         if block_time:
             return await self._backend.redis_pool.ttl(block_time_key)
@@ -89,7 +88,7 @@ class RedisCellBackend(BaseRedisBackend):
     async def _call_cell(self, key: str, rule: Rule, token_num: int = 1) -> List[int]:
         max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
         result: List[int] = await self._backend.execute(
-            'CL.THROTTLE', key, max_token, rule.gen_token_num, rule.gen_second(), token_num
+            "CL.THROTTLE", key, max_token, rule.gen_token_num, rule.gen_second(), token_num
         )
         return result
 
@@ -102,7 +101,7 @@ class RedisCellBackend(BaseRedisBackend):
         return await self._block_time_handle(key, rule, _can_requests)
 
     async def expected_time(self, key: str, rule: Rule) -> float:
-        block_time_key: str = key + ':block_time'
+        block_time_key: str = key + ":block_time"
         block_time = await self._backend.redis_pool.get(block_time_key)
         if block_time:
             return await self._backend.redis_pool.ttl(block_time_key)
@@ -149,20 +148,18 @@ end
             max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
             init_token_num: int = rule.init_token_num if rule.init_token_num else self._init_token_num
             result = await self._backend.redis_pool.eval(
-                self._lua_script,
-                keys=[key],
-                args=[time.time(), rule.gen_rate(), max_token, init_token_num]
+                self._lua_script, keys=[key], args=[time.time(), rule.gen_rate(), max_token, init_token_num]
             )
             return result
 
         return await self._block_time_handle(key, rule, _can_requests)
 
     async def expected_time(self, key: str, rule: Rule) -> float:
-        block_time_key: str = key + ':block_time'
+        block_time_key: str = key + ":block_time"
         block_time = await self._backend.redis_pool.get(block_time_key)
         if block_time:
             return await self._backend.redis_pool.ttl(block_time_key)
-        last_time = await self._backend.redis_pool.hget(key, 'lastTime')
+        last_time = await self._backend.redis_pool.hget(key, "lastTime")
         if last_time is None:
             return 0
         diff_time = last_time - time.time() * 1000

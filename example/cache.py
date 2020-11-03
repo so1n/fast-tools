@@ -5,19 +5,16 @@ from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
 from fast_tools.base import RedisHelper
-from fast_tools.cache import (
-    cache,
-    cache_control
-)
+from fast_tools.cache import cache, cache_control
 
 
-app: 'FastAPI' = FastAPI()
-redis_helper: 'RedisHelper' = RedisHelper()
+app: "FastAPI" = FastAPI()
+redis_helper: "RedisHelper" = RedisHelper()
 
 
 @app.on_event("startup")
 async def startup():
-    redis_helper.init(await aioredis.create_pool('redis://localhost', minsize=1, maxsize=10, encoding='utf-8'))
+    redis_helper.init(await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"))
 
 
 @app.on_event("shutdown")
@@ -44,6 +41,7 @@ async def test_not_return_annotation():
     return JSONResponse({"timestamp": time.time()})
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app)

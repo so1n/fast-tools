@@ -27,11 +27,7 @@ class Rule(object):
     def gen_second(self) -> float:
         """How long does it take to generate token"""
         return timedelta(
-            weeks=self.week,
-            days=self.day,
-            hours=self.hour,
-            minutes=self.minute,
-            seconds=self.second
+            weeks=self.week, days=self.day, hours=self.hour, minutes=self.minute, seconds=self.second
         ).total_seconds()
 
     def gen_rate(self) -> float:

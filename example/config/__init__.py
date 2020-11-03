@@ -41,6 +41,6 @@ def main(config_path: str, group: str):
     print(config_path, MyConfig(config_path, group=group))
 
 
-if __name__ == '__main__':
-    main('example_config.ini', 'test')
-    main('example_config.yml', 'test')
+if __name__ == "__main__":
+    main("example_config.ini", "test")
+    main("example_config.yml", "test")

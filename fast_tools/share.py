@@ -2,19 +2,19 @@ import asyncio
 from functools import wraps
 from typing import Any, Callable, Dict, TypeVar, Optional
 
-__all__ = ('Share', 'Token')
-_Tp = TypeVar('_Tp')
+__all__ = ("Share", "Token")
+_Tp = TypeVar("_Tp")
 
 
 class Token(object):
-    def __init__(self, key: str, share: 'Share'):
-        self._share: 'Share' = share
+    def __init__(self, key: str, share: "Share"):
+        self._share: "Share" = share
         self._key: str = key
         self._future: Optional[asyncio.Future] = None
 
     def can_do(self) -> bool:
         if not self._future:
-            self._future: 'asyncio.Future' = asyncio.Future()
+            self._future: "asyncio.Future" = asyncio.Future()
             return True
         return False
 
@@ -26,10 +26,7 @@ class Token(object):
 
     async def await_done(self) -> Optional[Any]:
         if not self._future:
-            raise RuntimeError(
-                f'You should use Token<{self._key}>.can_do() '
-                f'before Token<{self._key}>.await_done()'
-            )
+            raise RuntimeError(f"You should use Token<{self._key}>.can_do() " f"before Token<{self._key}>.await_done()")
         if not self._future.done():
             await self._future
         return self._future.result()
@@ -52,7 +49,7 @@ class Share(object):
 
     def get_token(self, key: str) -> Token:
         if key not in self._future_dict:
-            token: 'Token' = Token(key, self)
+            token: "Token" = Token(key, self)
             self._future_dict[key] = token
         return self._future_dict[key]
 
@@ -66,7 +63,7 @@ class Share(object):
         if key in self._future_dict:
             del self._future_dict[key]
         else:
-            raise KeyError(f'not found token:{key}')
+            raise KeyError(f"not found token:{key}")
 
     async def _token_handle(self, key: str, func: Callable, args: Optional[tuple], kwargs: Optional[dict]) -> Any:
         args: list = args if args else []
@@ -81,13 +78,7 @@ class Share(object):
                 raise e
         return await token.await_done()
 
-    async def do(
-        self,
-        key: str,
-        func: Callable,
-        args: Optional[list] = None,
-        kwargs: Optional[dict] = None
-    ) -> Any:
+    async def do(self, key: str, func: Callable, args: Optional[list] = None, kwargs: Optional[dict] = None) -> Any:
         return await self._token_handle(key, func, args, kwargs)
 
     def wrapper_do(self, key: Optional[str] = None):
@@ -100,7 +91,9 @@ class Share(object):
             @wraps(func)
             async def wrapper_func(*args, **kwargs):
                 return await self._token_handle(key_name, func, args, kwargs)
+
             return wrapper_func
+
         return wrapper
 
     def __str__(self):

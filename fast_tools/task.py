@@ -6,7 +6,7 @@ from typing import Any, Callable, Coroutine, Dict, Optional, Union
 
 from starlette.concurrency import run_in_threadpool
 
-__all__ = ['stop_task', 'background_task']
+__all__ = ["stop_task", "background_task"]
 
 FuncT = Callable[[], None]
 AsyncFuncT = Callable[[], Coroutine[Any, Any, None]]
@@ -75,16 +75,18 @@ def background_task(
                         break
 
             asyncio.ensure_future(task_loop())
+
         return wrapped
+
     return decorator
 
 
 def _stop_task(key: str, future: asyncio.Future):
     if not future.cancelled():
         future.cancel()
-        logging.info(f'cancel task:{key}')
+        logging.info(f"cancel task:{key}")
     else:
-        logging.warning(f'task:{key} already cancel')
+        logging.warning(f"task:{key} already cancel")
 
 
 def stop_task(key: Optional[str] = None):

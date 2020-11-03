@@ -1,34 +1,15 @@
 import inspect
 
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Sequence,
-    Type,
-    Union,
-    get_type_hints
-)
+from typing import Any, Callable, Dict, List, Optional, Set, Sequence, Type, Union, get_type_hints
 
-from fastapi import (
-    APIRouter,
-    Response,
-    params,
-    Depends
-)
-from fastapi.encoders import (
-    DictIntStrAny,
-    SetIntStr
-)
+from fastapi import APIRouter, Response, params, Depends
+from fastapi.encoders import DictIntStrAny, SetIntStr
 from fastapi.routing import APIRoute
 from pydantic.typing import is_classvar
 
 
-__all__ = ['Cbv', 'cbv_decorator']
-METHOD_SET: Set[str] = {'get', 'post', 'head', 'options', 'put', 'patch', 'delete'}
+__all__ = ["Cbv", "cbv_decorator"]
+METHOD_SET: Set[str] = {"get", "post", "head", "options", "put", "patch", "delete"}
 ROUTE_ATTRIBUTES_DICT: Dict[str, Dict[str, Any]] = {}
 
 
@@ -60,40 +41,40 @@ def cbv_decorator(
     if response_model_exclude is None:
         response_model_exclude = set()
     kwargs: Dict[str, Any] = {
-        'response_model': response_model,
-        'status_code': status_code,
-        'tags': tags,
-        'dependencies': dependencies,
-        'summary': summary,
-        'description': description,
-        'response_description': response_description,
-        'responses': responses,
-        'deprecated': deprecated,
-        'methods': methods,
-        'operation_id': operation_id,
-        'response_model_include': response_model_include,
-        'response_model_exclude': response_model_exclude,
-        'response_model_by_alias': response_model_by_alias,
-        'response_model_skip_defaults': response_model_skip_defaults,
-        'response_model_exclude_unset': response_model_exclude_unset,
-        'response_model_exclude_defaults': response_model_exclude_defaults,
-        'response_model_exclude_none': response_model_exclude_none,
-        'include_in_schema': include_in_schema,
-        'response_class': response_class,
-        'name': name,
-        'route_class_override': route_class_override,
-        'callbacks': callbacks,
+        "response_model": response_model,
+        "status_code": status_code,
+        "tags": tags,
+        "dependencies": dependencies,
+        "summary": summary,
+        "description": description,
+        "response_description": response_description,
+        "responses": responses,
+        "deprecated": deprecated,
+        "methods": methods,
+        "operation_id": operation_id,
+        "response_model_include": response_model_include,
+        "response_model_exclude": response_model_exclude,
+        "response_model_by_alias": response_model_by_alias,
+        "response_model_skip_defaults": response_model_skip_defaults,
+        "response_model_exclude_unset": response_model_exclude_unset,
+        "response_model_exclude_defaults": response_model_exclude_defaults,
+        "response_model_exclude_none": response_model_exclude_none,
+        "include_in_schema": include_in_schema,
+        "response_class": response_class,
+        "name": name,
+        "route_class_override": route_class_override,
+        "callbacks": callbacks,
     }
 
     def wrapper(func: Callable) -> Callable:
         ROUTE_ATTRIBUTES_DICT[func.__qualname__] = kwargs
         return func
+
     return wrapper
 
 
 class Cbv(object):
-
-    def __init__(self, obj,  url: str = '/'):
+    def __init__(self, obj, url: str = "/"):
         self._url: str = url
         self.router: APIRouter = APIRouter()
         self._obj: Type = obj
@@ -112,21 +93,20 @@ class Cbv(object):
                 kwargs: Dict[str, Any] = func_attributes
             else:
                 kwargs: Dict[str, Any] = {}
-            kwargs['methods'] = [_dir.upper()]
+            kwargs["methods"] = [_dir.upper()]
 
-            attributes: str = f'{self._obj.__name__}.{func.__name__}'
-            name: Optional[str] = kwargs.get('name', None)
+            attributes: str = f"{self._obj.__name__}.{func.__name__}"
+            name: Optional[str] = kwargs.get("name", None)
             if name is None:
                 name = attributes
             else:
-                name = name + f'({attributes})'
-            kwargs['name'] = name
+                name = name + f"({attributes})"
+            kwargs["name"] = name
 
             self.router.add_api_route(self._url, self._init_cbv(func), **kwargs)
 
     def _init_cbv(self, func: Callable) -> Callable:
-        """fork from https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py#L89
-        """
+        """fork from https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py#L89"""
         old_signature = inspect.signature(func)
         old_parameters: List[inspect.Parameter] = list(old_signature.parameters.values())
         self_param = old_parameters[0]
@@ -139,8 +119,7 @@ class Cbv(object):
         return func
 
     def _init_obj(self) -> None:
-        """fork from https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py#L53
-        """
+        """fork from https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py#L53"""
         cls = self._obj
         old_init: Callable[..., Any] = cls.__init__
         old_signature = inspect.signature(old_init)

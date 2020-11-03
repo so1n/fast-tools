@@ -16,29 +16,23 @@ class Bucket(object):
 
 
 class TokenBucket(BaseLimitBackend):
-
-    def __init__(
-            self,
-            init_token_num: Optional[int] = None,
-            block_time: Optional[int] = None,
-            max_token: int = 100
-    ):
+    def __init__(self, init_token_num: Optional[int] = None, block_time: Optional[int] = None, max_token: int = 100):
         self._init_token_num: int = init_token_num if init_token_num else max_token
         self._max_token_num: int = max_token
         self._block_time: Optional[int] = block_time
-        self._cache_dict: Dict[str, 'Bucket'] = {}
+        self._cache_dict: Dict[str, "Bucket"] = {}
 
-    def _gen_bucket(self, rule: Rule) -> 'Bucket':
+    def _gen_bucket(self, rule: Rule) -> "Bucket":
         bucket: Bucket = Bucket(
             rate=rule.gen_rate(),
             token_num=rule.init_token_num if rule.init_token_num else self._init_token_num,
             max_token_num=rule.max_token_num if rule.max_token_num else self._max_token_num,
-            block_time=rule.block_time if rule.block_time else self._block_time
+            block_time=rule.block_time if rule.block_time else self._block_time,
         )
         return bucket
 
     def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
-        bucket: 'Bucket' = self._cache_dict.get(key, self._gen_bucket(rule))
+        bucket: "Bucket" = self._cache_dict.get(key, self._gen_bucket(rule))
         now_timestamp: float = time.time()
         if bucket.block_timestamp and (bucket.block_timestamp - now_timestamp) > 0:
             return False
@@ -53,7 +47,7 @@ class TokenBucket(BaseLimitBackend):
         return result
 
     def expected_time(self, key: str, rule: Rule) -> float:
-        bucket: 'Bucket' = self._cache_dict.get(key, self._gen_bucket(rule))
+        bucket: "Bucket" = self._cache_dict.get(key, self._gen_bucket(rule))
         if bucket.block_timestamp:
             diff_block_time: float = bucket.block_timestamp - time.time()
             if diff_block_time > 0:
@@ -68,7 +62,7 @@ class TokenBucket(BaseLimitBackend):
             return 1 / bucket.rate
 
     @staticmethod
-    def _get_tokens(bucket: 'Bucket') -> int:
+    def _get_tokens(bucket: "Bucket") -> int:
         if bucket.token_num < bucket.max_token_num:
             now: float = time.time()
             diff_time: float = now - bucket.block_timestamp
@@ -82,13 +76,7 @@ class TokenBucket(BaseLimitBackend):
 
 
 class ThreadingTokenBucket(BaseLimitBackend):
-
-    def __init__(
-            self,
-            token_num: Optional[int] = None,
-            block_time: Optional[int] = None,
-            max_token: int = 100
-    ):
+    def __init__(self, token_num: Optional[int] = None, block_time: Optional[int] = None, max_token: int = 100):
         super().__init__(token_num, block_time, max_token)
         self._lock = threading.Lock()
 
@@ -101,10 +89,10 @@ class ThreadingTokenBucket(BaseLimitBackend):
             return super().expected_time(key, rule)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     token_bucket: TokenBucket = TokenBucket(1)
     test_rule: Rule = Rule(second=1, init_token_num=50, max_token_num=100)
-    test_key: str = 'test'
+    test_key: str = "test"
     print(token_bucket.expected_time(test_key, test_rule))
     print(token_bucket.get_token_num(test_key))
     token_bucket.can_requests(test_key, test_rule)

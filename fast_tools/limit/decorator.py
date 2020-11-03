@@ -7,19 +7,15 @@ from starlette.responses import Response
 from fast_tools.limit.rule import Rule
 from fast_tools.limit.backend.base import BaseLimitBackend
 from fast_tools.limit.backend.memory import TokenBucket
-from fast_tools.limit.util import (
-    DEFAULT_CONTENT,
-    DEFAULT_STATUS_CODE,
-    RULE_FUNC_TYPE
-)
+from fast_tools.limit.util import DEFAULT_CONTENT, DEFAULT_STATUS_CODE, RULE_FUNC_TYPE
 
 
 def limit(
-        rule_list: List[Rule],
-        backend: BaseLimitBackend = TokenBucket(),
-        limit_func: Optional[RULE_FUNC_TYPE] = None,
-        status_code: int = DEFAULT_STATUS_CODE,
-        content: str = DEFAULT_CONTENT,
+    rule_list: List[Rule],
+    backend: BaseLimitBackend = TokenBucket(),
+    limit_func: Optional[RULE_FUNC_TYPE] = None,
+    status_code: int = DEFAULT_STATUS_CODE,
+    content: str = DEFAULT_CONTENT,
 ):
     def wrapper(func: Callable) -> Callable:
         @wraps(func)
@@ -51,5 +47,7 @@ def limit(
                 return await func(*args, **kwargs)
             else:
                 return Response(content=content, status_code=status_code)
+
         return _limit
+
     return wrapper

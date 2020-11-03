@@ -1,17 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-__author__ = 'so1n'
-__date__ = '2020-08'
-from fastapi import (
-    FastAPI,
-    Depends,
-    Header,
-    Query
-)
-from fast_tools.cbv import (
-    cbv_decorator,
-    Cbv
-)
+__author__ = "so1n"
+__date__ = "2020-08"
+from fastapi import FastAPI, Depends, Header, Query
+from fast_tools.cbv import cbv_decorator, Cbv
 
 app: FastAPI = FastAPI()
 
@@ -21,7 +13,7 @@ def get_user_agent(user_agent: str = Header("User-Agent")) -> str:
 
 
 class TestCbv(object):
-    host: str = Header('host')
+    host: str = Header("host")
     user_agent: str = Depends(get_user_agent)
 
     def __init__(self, test_default_id: int = Query(123)):
@@ -40,6 +32,7 @@ class TestCbv(object):
 
 app.include_router(Cbv(TestCbv).router)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app)

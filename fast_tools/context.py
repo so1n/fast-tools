@@ -11,23 +11,22 @@ from starlette.responses import Response
 
 
 _CAN_JSON_TYPE_SET: Set[type] = {bool, dict, float, int, list, str, tuple, type(None)}
-_NAMESPACE: str = 'fast_tools'
+_NAMESPACE: str = "fast_tools"
 _CONTEXT_KEY_SET: Set[str] = set()
 _CONTEXT_DICT_TYPE: type = Dict[str, Any]
 _FASTAPI_TOOLS_CONTEXT: ContextVar[Dict[str, Any]] = ContextVar(f"{_NAMESPACE}_context", default={})
 _MISS_OBJECT: object = object()
-_REQUEST_KEY: str = f'{_NAMESPACE}_request'
+_REQUEST_KEY: str = f"{_NAMESPACE}_request"
 
 
 class BaseContextHelper(object):
-
     def __init__(self, key: str):
         self._key: key = key
-        cls: 'Type[BaseContextHelper]' = self.__class__
-        key: str = f'{cls.__name__}:{key}'
+        cls: "Type[BaseContextHelper]" = self.__class__
+        key: str = f"{cls.__name__}:{key}"
         if key in _CONTEXT_KEY_SET:
             # key must be globally unique
-            raise RuntimeError(f'key:{key} already exists')
+            raise RuntimeError(f"key:{key} already exists")
         _CONTEXT_KEY_SET.add(key)
 
     def _get_context(self) -> Any:
@@ -38,10 +37,10 @@ class BaseContextHelper(object):
         ctx_dict: _CONTEXT_DICT_TYPE = _FASTAPI_TOOLS_CONTEXT.get()
         ctx_dict[self._key] = value
 
-    def __set__(self, instance: 'ContextBaseModel', value: Any):
+    def __set__(self, instance: "ContextBaseModel", value: Any):
         self._set_context(value)
 
-    def __get__(self, instance: 'ContextBaseModel', owner: 'Type[ContextBaseModel]') -> Any:
+    def __get__(self, instance: "ContextBaseModel", owner: "Type[ContextBaseModel]") -> Any:
         return self._get_context()
 
 
@@ -50,16 +49,16 @@ class HeaderHelper(BaseContextHelper):
         self._default_func: Optional[Callable] = default_func
         super().__init__(key)
 
-    def __set__(self, instance: 'ContextBaseModel', value: Any):
-        raise NotImplementedError(f'{self.__class__.__name__} not support __set__')
+    def __set__(self, instance: "ContextBaseModel", value: Any):
+        raise NotImplementedError(f"{self.__class__.__name__} not support __set__")
 
-    def __get__(self, instance: 'ContextBaseModel', owner: 'Type[ContextBaseModel]') -> Any:
+    def __get__(self, instance: "ContextBaseModel", owner: "Type[ContextBaseModel]") -> Any:
         value: Any = self._get_context()
         if value is not _MISS_OBJECT:
             return value
 
         ctx_dict: _CONTEXT_DICT_TYPE = _FASTAPI_TOOLS_CONTEXT.get()
-        request: Request = ctx_dict[_NAMESPACE + ':request']
+        request: Request = ctx_dict[_NAMESPACE + ":request"]
         headers: Headers = request.headers
         if self._key != self._key.lower():
             value = headers.get(self._key) or headers.get(self._key.lower())
@@ -98,7 +97,6 @@ class ContextBaseModel(object):
 
 
 class ContextMiddleware(BaseHTTPMiddleware):
-
     def __init__(self, context_model: ContextBaseModel, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.context_model: ContextBaseModel = context_model
@@ -108,7 +106,7 @@ class ContextMiddleware(BaseHTTPMiddleware):
         try:
             await corn
         except Exception as e:
-            logging.error(f'{corn.__name__} error:{e} traceback info:{traceback.format_exc()}')
+            logging.error(f"{corn.__name__} error:{e} traceback info:{traceback.format_exc()}")
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         context_dict: _CONTEXT_DICT_TYPE = {_REQUEST_KEY: request}

@@ -16,22 +16,22 @@ def _check_typing_type(_type, origin_name: str) -> bool:
         return False
 
 
-async def cache_control(response: Response, backend: 'RedisHelper', key: str):
+async def cache_control(response: Response, backend: "RedisHelper", key: str):
     ttl = await backend.redis_pool.ttl(key)
     response.headers["Cache-Control"] = f"max-age={ttl}"
 
 
 def cache(
-    backend: 'RedisHelper',
+    backend: "RedisHelper",
     expire: int = None,
     namespace: str = "fast-tools",
     json_response: Type[JSONResponse] = JSONResponse,
-    after_cache_response_list: Optional[List[Callable[[Response, 'RedisHelper', str], Awaitable]]] = None,
+    after_cache_response_list: Optional[List[Callable[[Response, "RedisHelper", str], Awaitable]]] = None,
 ):
     def wrapper(func):
         @wraps(func)
         async def return_dict_handle(*args, **kwargs):
-            key: str = f'{namespace}:{func.__name__}:{args}:{kwargs}'
+            key: str = f"{namespace}:{func.__name__}:{args}:{kwargs}"
 
             while True:
                 ret: Dict[str, Any] = await backend.get_dict(key)
@@ -40,7 +40,7 @@ def cache(
                     for after_cache_response in after_cache_response_list:
                         await after_cache_response(response, backend, key)
                     return response
-                async with backend.lock(key+':lock') as lock:
+                async with backend.lock(key + ":lock") as lock:
                     if not lock:
                         ret = await func(*args, **kwargs)
                         await backend.set_dict(key, ret, expire)
@@ -50,7 +50,7 @@ def cache(
 
         @wraps(func)
         async def return_response_handle(*args, **kwargs):
-            key: str = f'{namespace}:{func.__name__}:{args}:{kwargs}'
+            key: str = f"{namespace}:{func.__name__}:{args}:{kwargs}"
 
             while True:
                 ret: Dict[str, Any] = await backend.get_dict(key)
@@ -60,11 +60,11 @@ def cache(
                         await after_cache_response(response, backend, key)
                     return response
 
-                async with backend.lock(key + ':lock') as lock:
+                async with backend.lock(key + ":lock") as lock:
                     if not lock:
                         resp: Response = await func(*args, **kwargs)
                         headers: dict = dict(resp.headers)
-                        del headers['content-length']
+                        del headers["content-length"]
                         content: str = resp.body.decode()
                         try:
                             content = json.loads(content)
@@ -74,12 +74,12 @@ def cache(
                         await backend.set_dict(
                             key,
                             {
-                                'content': content,
-                                'status_code': resp.status_code,
-                                'headers': dict(headers),
-                                'media_type': resp.media_type
+                                "content": content,
+                                "status_code": resp.status_code,
+                                "headers": dict(headers),
+                                "media_type": resp.media_type,
                             },
-                            expire
+                            expire,
                         )
                         return resp
                     else:
@@ -89,9 +89,9 @@ def cache(
         async def return_normal_handle(*args, **kwargs):
             return await func(*args, **kwargs)
 
-        sig: 'inspect.signature' = inspect.signature(func)
+        sig: "inspect.signature" = inspect.signature(func)
         return_annotation = sig.return_annotation
-        if return_annotation is dict or _check_typing_type(return_annotation, 'dict'):
+        if return_annotation is dict or _check_typing_type(return_annotation, "dict"):
             handle_func: Callable = return_dict_handle
         elif issubclass(return_annotation, Response):
             handle_func: Callable = return_response_handle
@@ -112,4 +112,3 @@ def cache(
         return handle_func
 
     return wrapper
-

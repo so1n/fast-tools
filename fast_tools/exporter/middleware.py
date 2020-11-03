@@ -13,39 +13,37 @@ from fast_tools.base import RouteTrie
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
     def __init__(
-            self,
-            app: ASGIApp,
-            app_name: str = 'fast_tools',
-            prefix: str = 'fast_tools',
-            route_trie: Optional['RouteTrie'] = None,
-            block_url_set: Optional[Set[str]] = None
+        self,
+        app: ASGIApp,
+        app_name: str = "fast_tools",
+        prefix: str = "fast_tools",
+        route_trie: Optional["RouteTrie"] = None,
+        block_url_set: Optional[Set[str]] = None,
     ) -> None:
         super().__init__(app)
         self._app_name: str = app_name
         self._block_url_set = block_url_set
         self._route_trie: Optional[RouteTrie] = route_trie
 
-        self.request_count: 'Counter' = Counter(
-            f"{prefix}_requests_total",
-            "Count of requests",
-            ["app_name", "method", "url_path"]
+        self.request_count: "Counter" = Counter(
+            f"{prefix}_requests_total", "Count of requests", ["app_name", "method", "url_path"]
         )
-        self.response_count: 'Counter' = Counter(
+        self.response_count: "Counter" = Counter(
             f"{prefix}_tool_responses_total",
             "Count of responses",
             ["app_name", "method", "url_path", "status_code"],
         )
-        self.request_time: 'Histogram' = Histogram(
+        self.request_time: "Histogram" = Histogram(
             f"{prefix}_tool_requests_time",
             "Histogram of requests time by url (in seconds) status:1 success status:0 fail",
             ["app_name", "method", "url_path", "status"],
         )
-        self.exception_count: 'Counter' = Counter(
+        self.exception_count: "Counter" = Counter(
             f"{prefix}_tool_exceptions_total",
             "count of exceptions",
             ["app_name", "method", "url_path", "exception_type"],
         )
-        self.request_in_progress: 'Gauge' = Gauge(
+        self.request_in_progress: "Gauge" = Gauge(
             f"{prefix}_tool_requests_in_progress",
             "Gauge of current requests",
             ["app_name", "method", "url_path"],
