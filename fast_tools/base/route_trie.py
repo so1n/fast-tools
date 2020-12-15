@@ -1,7 +1,11 @@
+from contextvars import ContextVar
 from typing import Dict, List, Union, Optional
 
 from starlette.routing import Match, Route
 from starlette.types import ASGIApp, Scope
+
+
+route_context: ContextVar[Optional[Route]] = ContextVar('route_context', default=None)
 
 
 class RouteNode:
@@ -54,14 +58,21 @@ class RouteTrie:
         return cur_node
 
     def search_by_scope(self, url_path: str, scope: Scope) -> Optional[Route]:
-        cur_node: "RouteNode" = self._search_node(url_path)
+        route: Optional[Route] = route_context.get()
+        if route:
+            return route
 
+        cur_node: "RouteNode" = self._search_node(url_path)
         for route in cur_node.route_list:
             if route.path == url_path:
-                return route
+                break
             match, child_scope = route.matches(scope)
             if match == Match.FULL:
-                return route
+                break
+
+        if route:
+            route_context.set(route)
+        return route
 
     def search(self, url_path: str) -> Optional[List[Route]]:
         cur_node: "RouteNode" = self._search_node(url_path)
