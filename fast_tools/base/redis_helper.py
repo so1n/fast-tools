@@ -1,10 +1,11 @@
 __author__ = "so1n"
 __date__ = "2020-10"
-
-
+import asyncio
 import datetime
 import logging
 import json
+import time
+
 from contextlib import asynccontextmanager
 from typing import Optional, Any, List, Tuple
 
@@ -42,19 +43,40 @@ class RedisHelper(object):
             )
         return None
 
+    async def _lock(self, key: str, timeout: int) -> bool:
+        lock = await self.execute("set", key, "1", "ex", timeout, "nx")
+        return True if lock == "ok" else False
+
     @asynccontextmanager
-    async def lock(self, name: str, timeout: int = 1 * 60, time_format: str = "%Y-%m-%d") -> bool:
+    async def lock(
+            self,
+            lock_key: str,
+            timeout: int = 1 * 60,
+            block_timeout: Optional[int] = None,
+            sleep_time: float = 0.1,
+            time_format: str = "%Y-%m-%d",
+            is_raise_exc: bool = True
+    ) -> bool:
+        if timeout and timeout > sleep_time:
+            raise RuntimeError("'sleep' must be less than 'timeout'")
         today_string: str = datetime.datetime.now().strftime(time_format)
-        key: str = f"{self._namespace}:lock:{name}:{today_string}"
+        real_key: str = f"{self._namespace}:lock:{lock_key}:{today_string}"
+        lock_ret: bool = False
+        start_time: int = int(time.time())
         try:
-            lock = await self.execute("set", key, "1", "ex", timeout, "nx")
-            if lock == "ok":
-                lock = True
-            else:
-                lock = False
-            yield lock
+            while True:
+                lock_ret = await self._lock(real_key, timeout)
+                if lock_ret or (block_timeout and (int(time.time()) - start_time) > block_timeout):
+                    break
+                else:
+                    await asyncio.sleep(sleep_time)
+
+            if not lock_ret and is_raise_exc:
+                raise TimeoutError('Get lock timeout')
+            yield lock_ret
         finally:
-            await self.execute("del", key)
+            if lock_ret:
+                await self.execute("del", real_key)
 
     async def exists(self, key: str) -> bool:
         ret: int = await self.execute("exists", key)
@@ -63,10 +85,10 @@ class RedisHelper(object):
         else:
             return False
 
-    async def get_dict(self, key) -> Optional[dict]:
+    async def get_dict(self, key) -> dict:
         data = await self.execute("get", key)
         if not data or data == "":
-            return None
+            return {}
         return json.loads(data)
 
     async def set_dict(self, key, data: dict, timeout: Optional[int] = None) -> None:
@@ -105,7 +127,7 @@ class RedisHelper(object):
             return None
         return json.loads(value)[field]
 
-    async def hmget_dict(self, key: str) -> Optional[dict]:
+    async def hmget_dict(self, key: str) -> dict:
         return_dict = {}
         scan = 0
         while True:

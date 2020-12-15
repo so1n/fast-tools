@@ -35,18 +35,15 @@ def cache(
 
             while True:
                 ret: Dict[str, Any] = await backend.get_dict(key)
-                if ret is not None:
+                if ret:
                     response: Response = json_response(ret)
                     for after_cache_response in after_cache_response_list:
                         await after_cache_response(response, backend, key)
                     return response
-                async with backend.lock(key + ":lock") as lock:
-                    if not lock:
-                        ret = await func(*args, **kwargs)
-                        await backend.set_dict(key, ret, expire)
-                        return json_response(ret)
-                    else:
-                        await asyncio.sleep(0.05)
+                async with backend.lock(key + ":lock"):
+                    ret = await func(*args, **kwargs)
+                    await backend.set_dict(key, ret, expire)
+                    return json_response(ret)
 
         @wraps(func)
         async def return_response_handle(*args, **kwargs):
@@ -54,36 +51,33 @@ def cache(
 
             while True:
                 ret: Dict[str, Any] = await backend.get_dict(key)
-                if ret is not None:
+                if ret:
                     response: Response = return_annotation(**ret)
                     for after_cache_response in after_cache_response_list:
                         await after_cache_response(response, backend, key)
                     return response
 
-                async with backend.lock(key + ":lock") as lock:
-                    if not lock:
-                        resp: Response = await func(*args, **kwargs)
-                        headers: dict = dict(resp.headers)
-                        del headers["content-length"]
-                        content: str = resp.body.decode()
-                        try:
-                            content = json.loads(content)
-                        except json.JSONDecodeError:
-                            pass
+                async with backend.lock(key + ":lock"):
+                    resp: Response = await func(*args, **kwargs)
+                    headers: dict = dict(resp.headers)
+                    del headers["content-length"]
+                    content: str = resp.body.decode()
+                    try:
+                        content = json.loads(content)
+                    except json.JSONDecodeError:
+                        pass
 
-                        await backend.set_dict(
-                            key,
-                            {
-                                "content": content,
-                                "status_code": resp.status_code,
-                                "headers": dict(headers),
-                                "media_type": resp.media_type,
-                            },
-                            expire,
-                        )
-                        return resp
-                    else:
-                        await asyncio.sleep(0.05)
+                    await backend.set_dict(
+                        key,
+                        {
+                            "content": content,
+                            "status_code": resp.status_code,
+                            "headers": dict(headers),
+                            "media_type": resp.media_type,
+                        },
+                        expire,
+                    )
+                    return resp
 
         @wraps(func)
         async def return_normal_handle(*args, **kwargs):
