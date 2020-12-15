@@ -14,29 +14,22 @@ from aioredis import ConnectionsPool, Redis
 class RedisHelper(object):
     def __init__(
         self,
-        conn_pool: Optional["ConnectionsPool"] = None,
         namespace: str = "fast-tools",
     ):
         self._namespace: str = namespace
         self._conn_pool: Optional["ConnectionsPool"] = None
         self.redis_pool: Optional["Redis"] = None
-        self.reload(conn_pool)
 
-    def init(self, conn_pool: "ConnectionsPool"):
-        if conn_pool is None or self._conn_pool.closed:
-            logging.error("conn_pool is none or conn_pool not connect")
+    def init(self, conn_pool: "ConnectionsPool", namespace: Optional[str] = None):
+        if conn_pool is None:
+            logging.error("conn_pool is none")
         elif self._conn_pool is not None and not self._conn_pool.closed:
-            self._conn_pool = conn_pool
-            self.redis_pool = Redis(self._conn_pool)
-        else:
             logging.error(f"Init error, {self.__class__.__name__} already init")
-
-    def reload(self, conn_pool: "ConnectionsPool"):
-        if not all([conn_pool, self._conn_pool]):
+        else:
             self._conn_pool = conn_pool
             self.redis_pool = Redis(self._conn_pool)
-        else:
-            logging.error(f"{self.__class__.__name__} reload error")
+            if namespace:
+                self._namespace = namespace
 
     async def execute(self, command: str, *args: Any, **kwargs: Any) -> Optional[Any]:
         try:
@@ -96,7 +89,7 @@ class RedisHelper(object):
 
             return await p.execute()
         except Exception as e:
-            logging.error("Redis executemany error, error:{}".format(str(e)))
+            logging.error("Redis pipeline error, error:{}".format(str(e)))
         return None
 
     async def hmset_dict(self, key, key_dict: dict):
@@ -139,3 +132,7 @@ class RedisHelper(object):
             await self._conn_pool.wait_closed()
         else:
             logging.warning(f"{self.__class__.__name__} has been closed")
+
+    @property
+    def namespace(self):
+        return self._namespace
