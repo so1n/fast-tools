@@ -2,13 +2,16 @@ import time
 from typing import Callable, Optional, Set
 
 from aio_statsd import StatsdClient
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.routing import Match
 from starlette.types import ASGIApp
 
 from fast_tools.base import RouteTrie
+from fast_tools.base.utils import namespace
 
 
 class StatsdMiddleware(BaseHTTPMiddleware):
@@ -17,8 +20,8 @@ class StatsdMiddleware(BaseHTTPMiddleware):
         app: ASGIApp,
         *,
         client: StatsdClient,
-        app_name: str = "fast_tools",
-        prefix: str = "fast_tools",
+        app_name: str = namespace,
+        prefix: str = namespace,
         route_trie: Optional["RouteTrie"] = None,
         url_replace_handle: Optional[Callable] = None,
         block_url_set: Optional[Set[str]] = None,
@@ -38,16 +41,23 @@ class StatsdMiddleware(BaseHTTPMiddleware):
         method: str = request.method
         url_path: str = request.url.path
 
+        if url_path in self._block_url_set:
+            return await call_next(request)
         if self._route_trie:
             route = self._route_trie.search_by_scope(url_path, request.scope)
             if not route:
                 return await call_next(request)
             else:
                 url_path = route.path
-        if url_path in self._block_url_set:
-            return await call_next(request)
+        else:
+            for route in request.app.routes:
+                match, child_scope = route.matches(request.scope)
+                if match == Match.FULL:
+                    url_path = route.path
+
         if self._url_replace_handle:
             url_path = self._url_replace_handle(url_path)
+
         metric: str = f"{self._metric}{method}.{url_path}."
         self._client.gauge(metric + "request_in_progress", 1)
         self._client.gauge(metric + "request_count", 1)

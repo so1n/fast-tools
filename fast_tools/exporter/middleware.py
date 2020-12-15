@@ -6,17 +6,19 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.routing import Match
 from starlette.types import ASGIApp
 
 from fast_tools.base import RouteTrie
+from fast_tools.base.utils import namespace
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        app_name: str = "fast_tools",
-        prefix: str = "fast_tools",
+        app_name: str = namespace,
+        prefix: str = namespace,
         route_trie: Optional["RouteTrie"] = None,
         block_url_set: Optional[Set[str]] = None,
     ) -> None:
@@ -53,15 +55,20 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         method: str = request.method
         url_path: str = request.url.path
 
+        if url_path in self._block_url_set:
+            return await call_next(request)
+
         if self._route_trie:
             route = self._route_trie.search_by_scope(url_path, request.scope)
             if not route:
                 return await call_next(request)
             else:
                 url_path = route.path
-
-        if url_path in self._block_url_set:
-            return await call_next(request)
+        else:
+            for route in request.app.routes:
+                match, child_scope = route.matches(request.scope)
+                if match == Match.FULL:
+                    url_path = route.path
 
         label_list: list = [self._app_name, method, url_path]
         self.request_in_progress.labels(*label_list).inc()

@@ -1,0 +1,1 @@
+namespace: str = 'fast-tools'
