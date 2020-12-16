@@ -17,7 +17,7 @@ def _check_typing_type(_type, origin_name: str) -> bool:
 
 
 async def cache_control(response: Response, backend: "RedisHelper", key: str):
-    ttl = await backend.redis_pool.ttl(key)
+    ttl = await backend.client.ttl(key)
     response.headers["Cache-Control"] = f"max-age={ttl}"
 
 

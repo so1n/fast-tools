@@ -1,7 +1,4 @@
-__author__ = "so1n"
-__date__ = "2020-10"
 import asyncio
-import datetime
 import logging
 import json
 import time
@@ -9,17 +6,18 @@ import time
 from contextlib import asynccontextmanager
 from typing import Optional, Any, List, Tuple
 
-from aioredis import ConnectionsPool, Redis
+from aioredis import ConnectionsPool, Redis, errors
+from fast_tools.base.utils import namespace as _namespace
 
 
 class RedisHelper(object):
     def __init__(
         self,
-        namespace: str = "fast-tools",
+        namespace: str = _namespace,
     ):
         self._namespace: str = namespace
         self._conn_pool: Optional["ConnectionsPool"] = None
-        self.redis_pool: Optional["Redis"] = None
+        self.client: Optional["Redis"] = None
 
     def init(self, conn_pool: "ConnectionsPool", namespace: Optional[str] = None):
         if conn_pool is None:
@@ -28,7 +26,7 @@ class RedisHelper(object):
             logging.error(f"Init error, {self.__class__.__name__} already init")
         else:
             self._conn_pool = conn_pool
-            self.redis_pool = Redis(self._conn_pool)
+            self.client = Redis(self._conn_pool)
             if namespace:
                 self._namespace = namespace
 
@@ -37,11 +35,10 @@ class RedisHelper(object):
             async with self._conn_pool.get() as conn:
                 return await conn.execute(command, *args, **kwargs)
         except Exception as e:
-            logging.error(
+            raise errors.RedisError(
                 f"{self.__class__.__name__} execute error. error:{e}."
                 f" command:{command}, args:{args}, kwargs:{kwargs}"
-            )
-        return None
+            ) from e
 
     async def _lock(self, key: str, timeout: int) -> bool:
         lock = await self.execute("set", key, "1", "ex", timeout, "nx")
@@ -54,13 +51,12 @@ class RedisHelper(object):
             timeout: int = 1 * 60,
             block_timeout: Optional[int] = None,
             sleep_time: float = 0.1,
-            time_format: str = "%Y-%m-%d",
-            is_raise_exc: bool = True
+            is_raise_exc: bool = True,
+            delay_time: Optional[int] = None,
     ) -> bool:
         if timeout and timeout > sleep_time:
             raise RuntimeError("'sleep' must be less than 'timeout'")
-        today_string: str = datetime.datetime.now().strftime(time_format)
-        real_key: str = f"{self._namespace}:lock:{lock_key}:{today_string}"
+        real_key: str = f"{self._namespace}:lock:{lock_key}"
         lock_ret: bool = False
         start_time: int = int(time.time())
         try:
@@ -76,14 +72,11 @@ class RedisHelper(object):
             yield lock_ret
         finally:
             if lock_ret:
-                await self.execute("del", real_key)
+                await self.del_key(real_key, delay_time)
 
     async def exists(self, key: str) -> bool:
         ret: int = await self.execute("exists", key)
-        if ret == 1:
-            return True
-        else:
-            return False
+        return True if ret == 1 else False
 
     async def get_dict(self, key) -> dict:
         data = await self.execute("get", key)
@@ -103,7 +96,7 @@ class RedisHelper(object):
 
     async def pipeline(self, exec_list: List[Tuple]) -> Optional[list]:
         try:
-            p = self.redis_pool.pipeline()
+            p = self.client.pipeline()
             for command, *args in exec_list:
                 if command == "del":
                     command = "delete"
@@ -111,8 +104,7 @@ class RedisHelper(object):
 
             return await p.execute()
         except Exception as e:
-            logging.error("Redis pipeline error, error:{}".format(str(e)))
-        return None
+            raise errors.PipelineError(f"Redis pipeline error, exec_list:{exec_list}") from e
 
     async def hmset_dict(self, key, key_dict: dict):
         value_list: list = []
