@@ -2,18 +2,15 @@ import time
 from typing import Optional, Set
 
 from prometheus_client import Counter, Gauge, Histogram
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.routing import Match
 from starlette.types import ASGIApp
 
-from fast_tools.base import RouteTrie
-from fast_tools.base.utils import NAMESPACE
+from fast_tools.base import BaseSearchRouteMiddleware, NAMESPACE, RouteTrie
 
 
-class PrometheusMiddleware(BaseHTTPMiddleware):
+class PrometheusMiddleware(BaseSearchRouteMiddleware):
     def __init__(
         self,
         app: ASGIApp,
@@ -22,10 +19,9 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         route_trie: Optional["RouteTrie"] = None,
         block_url_set: Optional[Set[str]] = None,
     ) -> None:
-        super().__init__(app)
+        super().__init__(app, route_trie=route_trie)
         self._app_name: str = app_name
         self._block_url_set = block_url_set
-        self._route_trie: Optional[RouteTrie] = route_trie
 
         self.request_count: "Counter" = Counter(
             f"{prefix}_requests_total", "Count of requests", ["app_name", "method", "url_path"]
@@ -53,18 +49,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         method: str = request.method
-        url_path: str = request.url.path
-
-        if self._route_trie:
-            route = self._route_trie.search_by_scope(url_path, request.scope)
-            if route:
-                url_path = route.path
-        else:
-            for route in request.app.routes:
-                match, child_scope = route.matches(request.scope)
-                if match == Match.FULL:
-                    url_path = route.path
-                    break
+        url_path: str = self.search_route_url(request)
 
         if url_path in self._block_url_set:
             return await call_next(request)

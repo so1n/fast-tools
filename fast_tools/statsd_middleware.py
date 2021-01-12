@@ -3,18 +3,15 @@ from typing import Callable, Optional, Set
 
 from aio_statsd import StatsdClient
 
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.routing import Match
 from starlette.types import ASGIApp
 
-from fast_tools.base import RouteTrie
-from fast_tools.base.utils import NAMESPACE
+from fast_tools.base import NAMESPACE, RouteTrie, BaseSearchRouteMiddleware
 
 
-class StatsdMiddleware(BaseHTTPMiddleware):
+class StatsdMiddleware(BaseSearchRouteMiddleware):
     def __init__(
         self,
         app: ASGIApp,
@@ -26,10 +23,9 @@ class StatsdMiddleware(BaseHTTPMiddleware):
         url_replace_handle: Optional[Callable] = None,
         block_url_set: Optional[Set[str]] = None,
     ) -> None:
-        super().__init__(app)
+        super().__init__(app, route_trie=route_trie)
         self._block_url_set = block_url_set
         self._client: StatsdClient = client
-        self._route_trie: Optional[RouteTrie] = route_trie
         self._metric = ""
         self._url_replace_handle = url_replace_handle
         if prefix:
@@ -39,21 +35,10 @@ class StatsdMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         method: str = request.method
-        url_path: str = request.url.path
+        url_path: str = self.search_route_url(request)
 
         if url_path in self._block_url_set:
             return await call_next(request)
-
-        if self._route_trie:
-            route = self._route_trie.search_by_scope(url_path, request.scope)
-            if route:
-                url_path = route.path
-        else:
-            for route in request.app.routes:
-                match, child_scope = route.matches(request.scope)
-                if match == Match.FULL:
-                    url_path = route.path
-                    break
 
         if self._url_replace_handle:
             url_path = self._url_replace_handle(url_path)
