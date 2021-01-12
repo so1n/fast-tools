@@ -1,4 +1,3 @@
-import asyncio
 import inspect
 import logging
 import json
@@ -6,7 +5,7 @@ from functools import wraps
 from typing import Any, Callable, Awaitable, Dict, List, Optional, Type
 
 from starlette.responses import Response, JSONResponse
-from fast_tools.base import RedisHelper
+from fast_tools.base import NAMESPACE, RedisHelper
 
 
 def _check_typing_type(_type, origin_name: str) -> bool:
@@ -17,6 +16,7 @@ def _check_typing_type(_type, origin_name: str) -> bool:
 
 
 async def cache_control(response: Response, backend: "RedisHelper", key: str):
+    """add ttl in response header"""
     ttl = await backend.client.ttl(key)
     response.headers["Cache-Control"] = f"max-age={ttl}"
 
@@ -24,40 +24,65 @@ async def cache_control(response: Response, backend: "RedisHelper", key: str):
 def cache(
     backend: "RedisHelper",
     expire: int = None,
-    namespace: str = "fast-tools",
+    namespace: str = NAMESPACE,
     json_response: Type[JSONResponse] = JSONResponse,
     after_cache_response_list: Optional[List[Callable[[Response, "RedisHelper", str], Awaitable]]] = None,
 ):
+    """
+    backend: now only support `RedisHelper`
+    expire: cache expiration time
+    namespace: key namespace
+    json_response: response like `JSONResponse` or `UJSONResponse`
+    after_cache_response:list: cache response data handle
+    """
     def wrapper(func):
         @wraps(func)
         async def return_dict_handle(*args, **kwargs):
             key: str = f"{namespace}:{func.__name__}:{args}:{kwargs}"
 
-            while True:
-                ret: Dict[str, Any] = await backend.get_dict(key)
-                if ret:
-                    response: Response = json_response(ret)
-                    for after_cache_response in after_cache_response_list:
-                        await after_cache_response(response, backend, key)
-                    return response
-                async with backend.lock(key + ":lock"):
-                    ret = await func(*args, **kwargs)
-                    await backend.set_dict(key, ret, expire)
-                    return json_response(ret)
+            async def _cache_response_handle(_ret: Dict[str, Any]) -> Response:
+                response: Response = json_response(_ret)
+                for after_cache_response in after_cache_response_list:
+                    await after_cache_response(response, backend, key)
+                return response
+
+            # get cache response data
+            ret: Dict[str, Any] = await backend.get_dict(key)
+            if ret:
+                return _cache_response_handle(ret)
+            else:
+                lock = backend.lock(key + ":lock")
+                async with lock:
+                    # get lock
+                    ret: Dict[str, Any] = await backend.get_dict(key)
+                    # check cache response data
+                    if ret:
+                        return _cache_response_handle(ret)
+                    else:
+                        ret = await func(*args, **kwargs)
+                        await backend.set_dict(key, ret, expire)
+                        return json_response(ret)
 
         @wraps(func)
         async def return_response_handle(*args, **kwargs):
             key: str = f"{namespace}:{func.__name__}:{args}:{kwargs}"
 
-            while True:
+            async def _cache_response_handle(_ret: Dict[str, Any]) -> Response:
+                response: Response = return_annotation(**_ret)
+                for after_cache_response in after_cache_response_list:
+                    await after_cache_response(response, backend, key)
+                return response
+
+            ret: Dict[str, Any] = await backend.get_dict(key)
+            if ret:
+                return await _cache_response_handle(ret)
+
+            lock = backend.lock(key + ":lock")
+            async with lock:
                 ret: Dict[str, Any] = await backend.get_dict(key)
                 if ret:
-                    response: Response = return_annotation(**ret)
-                    for after_cache_response in after_cache_response_list:
-                        await after_cache_response(response, backend, key)
-                    return response
-
-                async with backend.lock(key + ":lock"):
+                    return await _cache_response_handle(ret)
+                else:
                     resp: Response = await func(*args, **kwargs)
                     headers: dict = dict(resp.headers)
                     del headers["content-length"]
