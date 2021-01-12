@@ -2,12 +2,102 @@ import asyncio
 import logging
 import json
 import time
+import uuid
 
-from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from typing import Optional, Any, List, Tuple
 
 from aioredis import ConnectionsPool, Redis, errors
 from fast_tools.base.utils import NAMESPACE as _namespace
+
+
+class LockError(Exception):
+    ...
+
+
+class Lock(object):
+    """design like pyredis.lock"""
+    
+    # KEYS[1] - lock name
+    # ARGV[1] - token
+    # return 1 if the lock was released, otherwise 0
+    LUA_RELEASE_SCRIPT = """
+                    local token = redis.call('get', KEYS[1])
+                    if not token or token ~= ARGV[1] then
+                        return 0
+                    end
+                    redis.call('del', KEYS[1])
+                    return 1
+                """
+
+    def __init__(
+        self,
+        redis_helper: 'RedisHelper',
+        lock_key: str,
+        timeout: int = 1 * 60,
+        block_timeout: Optional[int] = None,
+        sleep_time: float = 0.1,
+    ):
+
+        self._redis: 'RedisHelper' = redis_helper
+        self._lock_key: str = f"{self._redis.namespace}:lock:{lock_key}"
+        self._timeout: int = timeout
+        self._blocking_timeout: Optional[int] = block_timeout
+        self._sleep_time: float = sleep_time
+
+        self.local: ContextVar = ContextVar('token', default=None)
+
+    async def __aenter__(self, blocking_timeout: Optional[int] = None):
+        # force blocking, as otherwise the user would have to check whether
+        # the lock was actually acquired or not.
+        await self.acquire(blocking_timeout=blocking_timeout)
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        await self.release()
+
+    async def locked(self) -> bool:
+        """
+        Returns True if this key is locked by any process, otherwise False.
+        """
+        return self._redis.client.get(self._lock_key) != ''
+
+    async def do_release(self, expected_token):
+        if not bool(
+                await self._redis.client.eval(self.LUA_RELEASE_SCRIPT, keys=[self._lock_key], args=[expected_token])
+        ):
+            raise LockError("Cannot release a lock that's no longer owned")
+
+    async def release(self):
+        """Releases the already acquired lock"""
+        expected_token = self.local.get()
+        if expected_token is None:
+            raise LockError("Cannot release an unlocked lock")
+        self.local.set(None)
+        await self.do_release(expected_token)
+
+    async def do_acquire(self, token):
+        timeout: int = int(self._timeout) if self._timeout else None
+
+        if await self._redis.execute("SET", self._lock_key, token, "ex", timeout, "nx") == "ok":
+            return True
+        return False
+
+    async def acquire(self, blocking_timeout: Optional[int] = None):
+        sleep: float = self._sleep_time
+        token: bytes = bytes(uuid.uuid1().hex)
+        if blocking_timeout is None:
+            blocking_timeout = self._blocking_timeout
+        stop_trying_at: Optional[float] = None
+        if blocking_timeout is not None:
+            stop_trying_at = time.time() + blocking_timeout
+        while True:
+            if await self.do_acquire(token):
+                self.local.set(token)
+                return True
+            if stop_trying_at is not None and time.time() > stop_trying_at:
+                return False
+            await asyncio.sleep(sleep)
 
 
 class RedisHelper(object):
@@ -40,39 +130,14 @@ class RedisHelper(object):
                 f" command:{command}, args:{args}, kwargs:{kwargs}"
             ) from e
 
-    async def _lock(self, key: str, timeout: int) -> bool:
-        lock = await self.execute("set", key, "1", "ex", timeout, "nx")
-        return True if lock == "ok" else False
-
-    @asynccontextmanager
-    async def lock(
-            self,
-            lock_key: str,
-            timeout: int = 1 * 60,
-            block_timeout: Optional[int] = None,
-            sleep_time: float = 0.1,
-            is_raise_exc: bool = True,
-            delay_time: Optional[int] = None,
-    ) -> bool:
-        if timeout and timeout > sleep_time:
-            raise RuntimeError("'sleep' must be less than 'timeout'")
-        real_key: str = f"{self._namespace}:lock:{lock_key}"
-        lock_ret: bool = False
-        start_time: int = int(time.time())
-        try:
-            while True:
-                lock_ret = await self._lock(real_key, timeout)
-                if lock_ret or (block_timeout and (int(time.time()) - start_time) > block_timeout):
-                    break
-                else:
-                    await asyncio.sleep(sleep_time)
-
-            if not lock_ret and is_raise_exc:
-                raise TimeoutError('Get lock timeout')
-            yield lock_ret
-        finally:
-            if lock_ret:
-                await self.del_key(real_key, delay_time)
+    def lock(
+        self,
+        key: str,
+        timeout: int = 1 * 60,
+        block_timeout: Optional[int] = None,
+        sleep_time: float = 0.1,
+    ):
+        return Lock(self, key, timeout, block_timeout, sleep_time)
 
     async def exists(self, key: str) -> bool:
         ret: int = await self.execute("exists", key)
