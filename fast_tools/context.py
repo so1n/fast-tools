@@ -9,17 +9,19 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
+from fast_tools.base.utils import namespace
+
 
 _CAN_JSON_TYPE_SET: Set[type] = {bool, dict, float, int, list, str, tuple, type(None)}
-_NAMESPACE: str = "fast_tools"
 _CONTEXT_KEY_SET: Set[str] = set()
 _CONTEXT_DICT_TYPE: type = Dict[str, Any]
-_FASTAPI_TOOLS_CONTEXT: ContextVar[Dict[str, Any]] = ContextVar(f"{_NAMESPACE}_context", default={})
+_FAST_TOOLS_CONTEXT: ContextVar[Dict[str, Any]] = ContextVar(f"{namespace}_context", default={})
 _MISS_OBJECT: object = object()
-_REQUEST_KEY: str = f"{_NAMESPACE}_request"
+_REQUEST_KEY: str = f"{namespace}_request"
 
 
 class BaseContextHelper(object):
+    """context object encapsulation"""
     def __init__(self, key: str):
         self._key: key = key
         cls: "Type[BaseContextHelper]" = self.__class__
@@ -30,11 +32,13 @@ class BaseContextHelper(object):
         _CONTEXT_KEY_SET.add(key)
 
     def _get_context(self) -> Any:
-        ctx_dict: _CONTEXT_DICT_TYPE = _FASTAPI_TOOLS_CONTEXT.get()
+        """get value by key"""
+        ctx_dict: _CONTEXT_DICT_TYPE = _FAST_TOOLS_CONTEXT.get()
         return ctx_dict.get(self._key, _MISS_OBJECT)
 
     def _set_context(self, value: Any):
-        ctx_dict: _CONTEXT_DICT_TYPE = _FASTAPI_TOOLS_CONTEXT.get()
+        """set value by key"""
+        ctx_dict: _CONTEXT_DICT_TYPE = _FAST_TOOLS_CONTEXT.get()
         ctx_dict[self._key] = value
 
     def __set__(self, instance: "ContextBaseModel", value: Any):
@@ -53,12 +57,16 @@ class HeaderHelper(BaseContextHelper):
         raise NotImplementedError(f"{self.__class__.__name__} not support __set__")
 
     def __get__(self, instance: "ContextBaseModel", owner: "Type[ContextBaseModel]") -> Any:
+        # get value from context
         value: Any = self._get_context()
         if value is not _MISS_OBJECT:
             return value
 
-        ctx_dict: _CONTEXT_DICT_TYPE = _FASTAPI_TOOLS_CONTEXT.get()
-        request: Request = ctx_dict[_NAMESPACE + ":request"]
+        # get request obj from context
+        ctx_dict: _CONTEXT_DICT_TYPE = _FAST_TOOLS_CONTEXT.get()
+        request: Request = ctx_dict[_REQUEST_KEY]
+
+        # get header value from request
         headers: Headers = request.headers
         if self._key != self._key.lower():
             value = headers.get(self._key) or headers.get(self._key.lower())
@@ -67,6 +75,8 @@ class HeaderHelper(BaseContextHelper):
 
         if not value and self._default_func is not None:
             value = self._default_func(request)
+
+        # set header value to context
         self._set_context(value)
         return value
 
@@ -87,12 +97,16 @@ class ContextBaseModel(object):
         return _dict
 
     async def before_request(self, request: Request):
+        """Execute before processing the request, usually to initialize the instance"""
         pass
 
     async def after_response(self, request: Request, response: Response):
+        """Execute after processing the response (if the execution is abnormal, it will not be executed)"""
         pass
 
     async def before_reset_context(self, request: Request, response: Response):
+        """between after response and before reset context execution
+         (regardless of whether the response is an exception)"""
         pass
 
 
@@ -110,15 +124,15 @@ class ContextMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         context_dict: _CONTEXT_DICT_TYPE = {_REQUEST_KEY: request}
-        token: Token = _FASTAPI_TOOLS_CONTEXT.set(context_dict)
+        token: Token = _FAST_TOOLS_CONTEXT.set(context_dict)
 
         await self._safe_context_life_handle(self.context_model.before_request(request))
 
         response: Optional[Response] = None
         try:
             response = await call_next(request)
-            await self._safe_context_life_handle(self.context_model.before_request(request))
+            await self._safe_context_life_handle(self.context_model.after_response(request, response))
             return response
         finally:
             await self._safe_context_life_handle(self.context_model.before_reset_context(request, response))
-            _FASTAPI_TOOLS_CONTEXT.reset(token)
+            _FAST_TOOLS_CONTEXT.reset(token)

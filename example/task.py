@@ -7,7 +7,7 @@ app: "FastAPI" = FastAPI()
 
 
 @app.on_event("startup")
-@background_task(seconds=10)
+@background_task(seconds=10, max_retry=3)
 def test_task() -> None:
     print(f"test.....{int(time.time())}")
 
