@@ -9,15 +9,15 @@ from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
-from fast_tools.base.utils import namespace
+from fast_tools.base.utils import NAMESPACE
 
 
 _CAN_JSON_TYPE_SET: Set[type] = {bool, dict, float, int, list, str, tuple, type(None)}
 _CONTEXT_KEY_SET: Set[str] = set()
 _CONTEXT_DICT_TYPE: type = Dict[str, Any]
-_FAST_TOOLS_CONTEXT: ContextVar[Dict[str, Any]] = ContextVar(f"{namespace}_context", default={})
+_FAST_TOOLS_CONTEXT: ContextVar[Dict[str, Any]] = ContextVar(f"{NAMESPACE}_context", default={})
 _MISS_OBJECT: object = object()
-_REQUEST_KEY: str = f"{namespace}_request"
+_REQUEST_KEY: str = f"{NAMESPACE}_request"
 
 
 class BaseContextHelper(object):

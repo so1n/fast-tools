@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Optional, Any, List, Tuple
 
 from aioredis import ConnectionsPool, Redis, errors
-from fast_tools.base.utils import namespace as _namespace
+from fast_tools.base.utils import NAMESPACE as _namespace
 
 
 class RedisHelper(object):

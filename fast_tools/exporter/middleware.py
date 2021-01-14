@@ -10,15 +10,15 @@ from starlette.routing import Match
 from starlette.types import ASGIApp
 
 from fast_tools.base import RouteTrie
-from fast_tools.base.utils import namespace
+from fast_tools.base.utils import NAMESPACE
 
 
 class PrometheusMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        app_name: str = namespace,
-        prefix: str = namespace,
+        app_name: str = NAMESPACE,
+        prefix: str = NAMESPACE,
         route_trie: Optional["RouteTrie"] = None,
         block_url_set: Optional[Set[str]] = None,
     ) -> None:
