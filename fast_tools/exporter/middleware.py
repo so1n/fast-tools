@@ -31,22 +31,22 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             f"{prefix}_requests_total", "Count of requests", ["app_name", "method", "url_path"]
         )
         self.response_count: "Counter" = Counter(
-            f"{prefix}_tool_responses_total",
+            f"{prefix}_responses_total",
             "Count of responses",
             ["app_name", "method", "url_path", "status_code"],
         )
         self.request_time: "Histogram" = Histogram(
-            f"{prefix}_tool_requests_time",
+            f"{prefix}_requests_time",
             "Histogram of requests time by url (in seconds) status:1 success status:0 fail",
             ["app_name", "method", "url_path", "status"],
         )
         self.exception_count: "Counter" = Counter(
-            f"{prefix}_tool_exceptions_total",
+            f"{prefix}_exceptions_total",
             "count of exceptions",
             ["app_name", "method", "url_path", "exception_type"],
         )
         self.request_in_progress: "Gauge" = Gauge(
-            f"{prefix}_tool_requests_in_progress",
+            f"{prefix}_requests_in_progress",
             "Gauge of current requests",
             ["app_name", "method", "url_path"],
         )
@@ -55,20 +55,19 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         method: str = request.method
         url_path: str = request.url.path
 
-        if url_path in self._block_url_set:
-            return await call_next(request)
-
         if self._route_trie:
             route = self._route_trie.search_by_scope(url_path, request.scope)
-            if not route:
-                return await call_next(request)
-            else:
+            if route:
                 url_path = route.path
         else:
             for route in request.app.routes:
                 match, child_scope = route.matches(request.scope)
                 if match == Match.FULL:
                     url_path = route.path
+                    break
+
+        if url_path in self._block_url_set:
+            return await call_next(request)
 
         label_list: list = [self._app_name, method, url_path]
         self.request_in_progress.labels(*label_list).inc()

@@ -43,17 +43,17 @@ class StatsdMiddleware(BaseHTTPMiddleware):
 
         if url_path in self._block_url_set:
             return await call_next(request)
+
         if self._route_trie:
             route = self._route_trie.search_by_scope(url_path, request.scope)
-            if not route:
-                return await call_next(request)
-            else:
+            if route:
                 url_path = route.path
         else:
             for route in request.app.routes:
                 match, child_scope = route.matches(request.scope)
                 if match == Match.FULL:
                     url_path = route.path
+                    break
 
         if self._url_replace_handle:
             url_path = self._url_replace_handle(url_path)
