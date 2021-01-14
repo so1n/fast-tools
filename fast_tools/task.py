@@ -20,9 +20,17 @@ def background_task(
     seconds: Optional[float] = None,
     key: Optional[str] = None,
     logger: Optional[logging.Logger] = None,
-    raise_exceptions: bool = False,
+    enable_raise: bool = False,
     max_retry: Optional[int] = None,
 ) -> Callable[[Union[FuncT, AsyncFuncT]], AsyncFuncT]:
+    """
+    seconds: If seconds is not empty, the task will be executed every `n` seconds,
+     otherwise the task will be executed only once
+    key: task key, if key is empty, key is func name
+    logger: python logging logger
+    enable_raise: if enable_raise is not empty, it will report an error directly instead of retrying
+    max_retry: If max_retry is not empty, the number of task cycles will be limited 
+    """
     def decorator(func: Union[AsyncFuncT, FuncT]) -> AsyncFuncT:
         @wraps(func)
         async def wrapped():
@@ -40,7 +48,7 @@ def background_task(
                             await run_in_threadpool(func)
                         break
                     except Exception as e:
-                        if raise_exceptions:
+                        if enable_raise:
                             raise e
                         else:
                             retry_cnt += 1
@@ -64,6 +72,7 @@ def background_task(
                     future = future_dict.get(key, None)
                     if future is not None:
                         if future.cancelled():
+                            future.cancel()
                             break
                         elif not future.done():
                             await asyncio.sleep(1)
@@ -84,15 +93,18 @@ def background_task(
 def _stop_task(key: str, future: asyncio.Future):
     if not future.cancelled():
         future.cancel()
-        logging.info(f"cancel task:{key}")
+        logging.info(f"stop task:{key}")
+    elif future.done():
+        logging.warning(f"task:{key} already stop")
     else:
-        logging.warning(f"task:{key} already cancel")
+        logging.warning(f"{key} can't stop")
 
 
 def stop_task(key: Optional[str] = None):
-    if key and key in future_dict:
-        future = future_dict[key]
-        _stop_task(key, future)
+    if key:
+        if key in future_dict:
+            future = future_dict[key]
+            _stop_task(key, future)
     else:
         for key, future in future_dict.items():
             _stop_task(key, future)
