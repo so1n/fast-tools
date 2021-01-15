@@ -100,6 +100,7 @@ class RedisCellBackend(BaseRedisBackend):
         async def _can_requests() -> bool:
             result: List[int] = await self._call_cell(key, rule, token_num)
             can_requests: bool = bool(result[0])
+            await self._backend.client.expire(key, rule.total_second)
             return can_requests
 
         return await self._block_time_handle(key, rule, _can_requests)
@@ -154,6 +155,7 @@ end
             result = await self._backend.client.eval(
                 self._lua_script, keys=[key], args=[time.time(), rule.rate, max_token, init_token_num]
             )
+            await self._backend.client.expire(key, rule.total_second)
             return result
 
         return await self._block_time_handle(key, rule, _can_requests)
