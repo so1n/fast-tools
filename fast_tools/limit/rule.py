@@ -24,15 +24,15 @@ class Rule(object):
 
     _kwargs: Optional[Dict[str, Any]] = None
 
-    def gen_second(self) -> float:
-        """How long does it take to generate token"""
-        return timedelta(
+    total_second: float = 0
+    rate: float = 0
+
+    def __post_init__(self):
+        # How long does it take to generate token
+        self.total_second = timedelta(
             weeks=self.week, days=self.day, hours=self.hour, minutes=self.minute, seconds=self.second
         ).total_seconds()
 
-    def gen_rate(self) -> float:
-        """
-        gen_second: 60 gen_token: 1  = 1 req/m
-        gen_second: 1  gen_token: 1000 = 1000 req/s = 1 req/ms
-        """
-        return self.gen_token_num / self.gen_second()
+        # total_second: 60 gen_token: 1  = 1 req/m
+        # total_second: 1  gen_token: 1000 = 1000 req/s = 1 req/ms
+        self.rate = self.gen_token_num / self.total_second

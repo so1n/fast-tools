@@ -21,10 +21,11 @@ class TokenBucket(BaseLimitBackend):
         self._max_token_num: int = max_token
         self._block_time: Optional[int] = block_time
         self._cache_dict: Dict[str, "Bucket"] = {}
+        # TODO LRU
 
     def _gen_bucket(self, rule: Rule) -> "Bucket":
         bucket: Bucket = Bucket(
-            rate=rule.gen_rate(),
+            rate=rule.rate,
             token_num=rule.init_token_num if rule.init_token_num else self._init_token_num,
             max_token_num=rule.max_token_num if rule.max_token_num else self._max_token_num,
             block_time=rule.block_time if rule.block_time else self._block_time,

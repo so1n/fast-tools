@@ -21,14 +21,14 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
         self._backend: "RedisHelper" = backend
 
     async def _block_time_handle(self, key: str, rule: Rule, func: Callable[..., Awaitable[bool]]):
-        block_time_key: str = key + f":block_time"
+        block_time_key: str = f"{key}:block_time"
         bucket_block_time: int = rule.block_time if rule.block_time is not None else self._block_time
 
         if bucket_block_time is not None:
             if await self._backend.exists(block_time_key):
                 return False
 
-        can_requests = await func()
+        can_requests: bool = await func()
         if not can_requests and bucket_block_time is not None:
             await self._backend.client.set(block_time_key, bucket_block_time, expire=bucket_block_time)
 
@@ -38,11 +38,15 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
 class RedisFixedWindowBackend(BaseRedisBackend):
     async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         async def _can_requests() -> bool:
+            """
+            In the current time(rule.get_second()) window,
+             whether the existing value(access_num) exceeds the maximum value(rule.gen_token_num)
+            """
             access_num: int = await self._backend.client.incr(key)
             if access_num == 1:
-                await self._backend.client.expire(key, rule.gen_second())
+                await self._backend.client.expire(key, rule.total_second)
 
-            can_requests: bool = not access_num > rule.gen_token_num
+            can_requests: bool = not (access_num > rule.gen_token_num)
             return can_requests
 
         return await self._block_time_handle(key, rule, _can_requests)
@@ -88,7 +92,7 @@ class RedisCellBackend(BaseRedisBackend):
     async def _call_cell(self, key: str, rule: Rule, token_num: int = 1) -> List[int]:
         max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
         result: List[int] = await self._backend.execute(
-            "CL.THROTTLE", key, max_token, rule.gen_token_num, rule.gen_second(), token_num
+            "CL.THROTTLE", key, max_token, rule.gen_token_num, rule.total_second, token_num
         )
         return result
 
@@ -148,7 +152,7 @@ end
             max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
             init_token_num: int = rule.init_token_num if rule.init_token_num else self._init_token_num
             result = await self._backend.client.eval(
-                self._lua_script, keys=[key], args=[time.time(), rule.gen_rate(), max_token, init_token_num]
+                self._lua_script, keys=[key], args=[time.time(), rule.rate, max_token, init_token_num]
             )
             return result
 
