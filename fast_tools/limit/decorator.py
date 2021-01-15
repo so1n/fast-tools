@@ -16,30 +16,47 @@ def limit(
     limit_func: Optional[RULE_FUNC_TYPE] = None,
     status_code: int = DEFAULT_STATUS_CODE,
     content: str = DEFAULT_CONTENT,
+    enable_match_fail_pass: bool = True
 ):
+    """
+    rule_list: Rule obj list
+    backend: Current limiting method
+    limit_func: Get the current request key and group value
+    status_code: fail response status code
+    content: fail response content
+    enable_match_fail_pass: if not match and `enable_match_fail_pass` is False,
+     If the match fails, the flow is not limited
+    """
     def wrapper(func: Callable) -> Callable:
         @wraps(func)
         async def _limit(*args, **kwargs):
+            # get request param
             request: Optional[Request] = None
             for arg in args:
                 if isinstance(arg, Request):
                     request = arg
                     break
 
+            # set default key, group
             key: str = str(id(func))
             group: Optional[str] = None
+
+            # search key, group
             if limit_func is not None and request is not None:
                 if asyncio.iscoroutinefunction(limit_func):
                     key, group = await limit_func(request)
                 else:
                     key, group = limit_func(request)
 
+            # match url rule
             for rule in rule_list:
                 if rule.group == group:
                     break
             else:
-                return Response(content=content, status_code=status_code)
-
+                if enable_match_fail_pass:
+                    return await func(*args, **kwargs)
+                else:
+                    return Response(content=content, status_code=status_code)
             can_requests: Union[bool, Awaitable[bool]] = backend.can_requests(key, rule)
             if asyncio.iscoroutine(can_requests):
                 can_requests = await can_requests

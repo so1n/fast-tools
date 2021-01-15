@@ -24,12 +24,23 @@ class LimitMiddleware(BaseHTTPMiddleware):
         content: str = DEFAULT_CONTENT,
         func: Optional[RULE_FUNC_TYPE] = None,
         rule_dict: Dict[str, Rule] = None,
+        enable_match_fail_pass: bool = True
     ) -> None:
+        """
+        rule_dict: key: url re rule, value: rule obj list
+        backend: Current limiting method
+        limit_func: Get the current request key and group value
+        status_code: fail response status code
+        content: fail response content
+        enable_match_fail_pass: if not match and `enable_match_fail_pass` is False,
+         If the match fails, the flow is not limited
+        """
         super().__init__(app)
         self._backend: BaseLimitBackend = backend
         self._content: str = content
         self._func: Optional[RULE_FUNC_TYPE] = func
         self._status_code: int = status_code
+        self._enable_match_fail_pass: bool = enable_match_fail_pass
 
         self._rule_dict: Dict[re.Pattern[str], List[Rule]] = {
             re.compile(key): value for key, value in rule_dict.items()
@@ -55,7 +66,10 @@ class LimitMiddleware(BaseHTTPMiddleware):
             if rule.group == group:
                 break
         else:
-            return await call_next(request)
+            if self._enable_match_fail_pass:
+                return await call_next(request)
+            else:
+                return Response(content=self._content, status_code=self._status_code)
 
         can_requests: Union[bool, Awaitable[bool]] = self._backend.can_requests(key, rule)
         if asyncio.iscoroutine(can_requests):
