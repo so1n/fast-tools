@@ -1,3 +1,4 @@
+from .lru import LRUCache
 from .middleware import BaseSearchRouteMiddleware
 from .redis_helper import RedisHelper
 from .route_trie import RouteTrie
