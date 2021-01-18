@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 
 __all__ = ["LRUCache"]
+_MISS_OBJECT = object()
 
 
 class LRUCache:
@@ -12,13 +13,15 @@ class LRUCache:
         self.cache: OrderedDict[Any, Any] = OrderedDict()
         self._lock: Lock = Lock()
 
-    def get(self, key: Any, default_value: Optional[Any] = None) -> Any:
+    def get(self, key: Any, default_value: Optional[Any] = _MISS_OBJECT) -> Any:
         with self._lock:
             try:
                 value = self.cache.pop(key)
                 self.cache[key] = value
                 return value
-            except KeyError:
+            except KeyError as e:
+                if default_value is _MISS_OBJECT:
+                    raise e
                 return default_value
 
     def set(self, key: Any, value: Any) -> Any:
