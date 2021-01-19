@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Any, Dict, Optional
+from typing import Optional
 
 
 @dataclass
@@ -12,20 +12,21 @@ class Rule(object):
     day: int = 0
     week: int = 0
 
-    max_token_num: Optional[int] = None  # Maximum number of tokens per bucket
-    gen_token_num: int = 1  # The number of tokens generated per unit time
+    # token config
+    max_token_num: Optional[int] = 100    # Maximum number of tokens per bucket
+    gen_token_num: int = 1                # The number of tokens generated per unit time
     init_token_num: Optional[int] = None  # The initial number of tokens in the bucket
 
     group: Optional[str] = None
-
     block_time: Optional[int] = None
-
-    _kwargs: Optional[Dict[str, Any]] = None
 
     total_second: float = 0
     rate: float = 0
 
     def __post_init__(self):
+        if not self.init_token_num or self.init_token_num > self.max_token_num:
+            self.init_token_num = self.max_token_num
+
         # How long does it take to generate token
         self.total_second = timedelta(
             weeks=self.week, days=self.day, hours=self.hour, minutes=self.minute, seconds=self.second

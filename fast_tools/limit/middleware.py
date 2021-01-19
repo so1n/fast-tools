@@ -1,6 +1,6 @@
 import asyncio
 import re
-from typing import Awaitable, Dict, List, Optional, Union
+from typing import Awaitable, Dict, List, Optional, Tuple, Union
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.base import RequestResponseEndpoint
@@ -22,12 +22,12 @@ class LimitMiddleware(BaseHTTPMiddleware):
         backend: BaseLimitBackend = TokenBucket(),
         status_code: int = DEFAULT_STATUS_CODE,
         content: str = DEFAULT_CONTENT,
-        func: Optional[RULE_FUNC_TYPE] = None,
-        rule_dict: Dict[str, Rule] = None,
+        limit_func: Optional[RULE_FUNC_TYPE] = None,
+        rule_list: List[Tuple[str, List[Rule]]] = None,
         enable_match_fail_pass: bool = True
     ) -> None:
         """
-        rule_dict: key: url re rule, value: rule obj list
+        rule_list: [url re rule, [rule obj list]]
         backend: Current limiting method
         limit_func: Get the current request key and group value
         status_code: fail response status code
@@ -38,17 +38,17 @@ class LimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._backend: BaseLimitBackend = backend
         self._content: str = content
-        self._func: Optional[RULE_FUNC_TYPE] = func
+        self._func: Optional[RULE_FUNC_TYPE] = limit_func
         self._status_code: int = status_code
         self._enable_match_fail_pass: bool = enable_match_fail_pass
 
-        self._rule_dict: Dict[re.Pattern[str], List[Rule]] = {
-            re.compile(key): value for key, value in rule_dict.items()
-        }
+        self._rule_list: List[Tuple[re.Pattern[str], List[Rule]]] = [
+            (re.compile(key), value) for key, value in rule_list
+        ]
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         url_path: str = request.url.path
-        for pattern, rule_list in self._rule_dict.items():
+        for pattern, rule_list in self._rule_list:
             if pattern.match(url_path):
                 break
         else:

@@ -18,19 +18,16 @@ class Bucket(object):
 
 
 class TokenBucket(BaseLimitBackend):
-    def __init__(self, init_token_num: Optional[int] = None, block_time: Optional[int] = None, max_token: int = 100):
-        self._init_token_num: int = init_token_num if init_token_num else max_token
-        self._max_token_num: int = max_token
-        self._block_time: Optional[int] = block_time
-        # self._cache_dict: Dict[str, "Bucket"] = {}
+    def __init__(self):
         self._cache_dict: LRUCache[str, "Bucket"] = LRUCache(10000)
 
-    def _gen_bucket(self, rule: Rule) -> "Bucket":
+    @staticmethod
+    def _gen_bucket(rule: Rule) -> "Bucket":
         bucket: Bucket = Bucket(
             rate=rule.rate,
-            token_num=rule.init_token_num if rule.init_token_num else self._init_token_num,
-            max_token_num=rule.max_token_num if rule.max_token_num else self._max_token_num,
-            block_time=rule.block_time if rule.block_time else self._block_time,
+            token_num=rule.init_token_num,
+            max_token_num=rule.max_token_num,
+            block_time=rule.block_time,
         )
         return bucket
 
@@ -79,10 +76,10 @@ class TokenBucket(BaseLimitBackend):
         return self._cache_dict.get(key).token_num
 
 
-class ThreadingTokenBucket(BaseLimitBackend):
-    def __init__(self, token_num: Optional[int] = None, block_time: Optional[int] = None, max_token: int = 100):
-        super().__init__(token_num, block_time, max_token)
-        self._lock = threading.Lock()
+class ThreadingTokenBucket(TokenBucket):
+    def __init__(self):
+        super().__init__()
+        self._lock: "threading.Lock" = threading.Lock()
 
     def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         with self._lock:
@@ -94,7 +91,7 @@ class ThreadingTokenBucket(BaseLimitBackend):
 
 
 if __name__ == "__main__":
-    token_bucket: TokenBucket = TokenBucket(1)
+    token_bucket: TokenBucket = TokenBucket()
     test_rule: Rule = Rule(second=1, init_token_num=50, max_token_num=100)
     test_key: str = "test"
     print(token_bucket.expected_time(test_key, test_rule))

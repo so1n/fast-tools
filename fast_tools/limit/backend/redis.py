@@ -8,25 +8,15 @@ from fast_tools.limit.rule import Rule
 
 
 class BaseRedisBackend(BaseLimitBackend, ABC):
-    def __init__(
-        self,
-        backend: "RedisHelper",
-        init_token_num: Optional[int] = None,
-        block_time: Optional[int] = None,
-        max_token_num: int = 100,
-    ):
-        self._init_token_num: int = init_token_num if init_token_num else max_token_num
-        self._max_token_num: int = max_token_num
-        self._block_time: Optional[int] = block_time
+    def __init__(self, backend: "RedisHelper"):
         self._backend: "RedisHelper" = backend
 
     async def _block_time_handle(self, key: str, rule: Rule, func: Callable[..., Awaitable[bool]]):
         block_time_key: str = f"{key}:block_time"
-        bucket_block_time: int = rule.block_time if rule.block_time is not None else self._block_time
+        bucket_block_time: int = rule.block_time
 
-        if bucket_block_time is not None:
-            if await self._backend.exists(block_time_key):
-                return False
+        if bucket_block_time is not None and await self._backend.exists(block_time_key):
+            return False
 
         can_requests: bool = await func()
         if not can_requests and bucket_block_time is not None:
@@ -90,9 +80,8 @@ class RedisCellBackend(BaseRedisBackend):
     """
 
     async def _call_cell(self, key: str, rule: Rule, token_num: int = 1) -> List[int]:
-        max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
         result: List[int] = await self._backend.execute(
-            "CL.THROTTLE", key, max_token, rule.gen_token_num, rule.total_second, token_num
+            "CL.THROTTLE", key, rule.max_token_num, rule.gen_token_num, rule.total_second, token_num
         )
         return result
 
@@ -118,42 +107,40 @@ class RedisCellBackend(BaseRedisBackend):
 class RedisTokenBucketBackend(BaseRedisBackend):
     _lua_script = """
 local key = KEYS[1]
-local currentTime = tonumber(ARGV[1])
-local intervalPerToken = tonumber(ARGV[2])
-local maxToken = tonumber(ARGV[3])
-local initToken = tonumber(ARGV[4])
+local current_time = tonumber(ARGV[1])
+local interval_per_token = tonumber(ARGV[2])
+local max_token = tonumber(ARGV[3])
+local init_token = tonumber(ARGV[4])
 local tokens
-local bucket = redis.call("hmget", key, "lastTime", "lastToken")
-local lastTime = bucket[1]
-local lastToken = bucket[2]
-if lastTime == false or lastToken == false then
-    tokens = initToken
-    redis.call('hset', key, 'lastTime', currentTime)
+local bucket = redis.call("hmget", key, "last_time", "last_token")
+local last_time= bucket[1]
+local last_token = bucket[2]
+if last_time== false or last_token == false then
+    tokens = init_token
+    redis.call('hset', key, 'last_time', current_time)
 else
-    local thisInterval = currentTime - tonumber(lastTime)
+    local thisInterval = current_time - tonumber(last_time)
     if thisInterval > 1 then
-        local tokensToAdd = math.floor(thisInterval * intervalPerToken)
-        tokens = math.min(lastToken + tokensToAdd, maxToken)
-        redis.call('hset', key, 'lastTime', currentTime)
+        local tokensToAdd = math.floor(thisInterval * interval_per_token)
+        tokens = math.min(last_token + tokensToAdd, max_token)
+        redis.call('hset', key, 'last_time', current_time)
     else
-        tokens = lastToken
+        tokens = last_token
     end
 end
 if tokens < 1 then
-    redis.call('hset', key, 'lastToken', tokens)
+    redis.call('hset', key, 'last_token', tokens)
     return 'false'
 else
-    redis.call('hset', key, 'lastToken', tokens - 1)
+    redis.call('hset', key, 'last_token', tokens - 1)
     return tokens - 1
 end
     """
 
     async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         async def _can_requests() -> bool:
-            max_token: int = rule.max_token_num if rule.max_token_num else self._max_token_num
-            init_token_num: int = rule.init_token_num if rule.init_token_num else self._init_token_num
             result = await self._backend.client.eval(
-                self._lua_script, keys=[key], args=[time.time(), rule.rate, max_token, init_token_num]
+                self._lua_script, keys=[key], args=[time.time(), rule.rate, rule.max_token_num, rule.init_token_num]
             )
             await self._backend.client.expire(key, rule.total_second)
             return result
@@ -165,7 +152,7 @@ end
         block_time = await self._backend.client.get(block_time_key)
         if block_time:
             return await self._backend.client.ttl(block_time_key)
-        last_time = await self._backend.client.hget(key, "lastTime")
+        last_time = await self._backend.client.hget(key, "last_time")
         if last_time is None:
             return 0
         diff_time = last_time - time.time() * 1000
