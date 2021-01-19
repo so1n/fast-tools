@@ -1,5 +1,5 @@
 # fast-tools
-`fast-tools`是一个`FastApi/Starlette`的工具集, 大部分工具都可用于FastApi/Starlette, 少部工具只支持`FastApi`是分为了兼容`FastApi`的不足
+`fast-tools`是一个`FastApi/Starlette`的库合集, 大部分库都可用于FastApi/Starlette, 少部库只支持`FastApi`是为了兼容`FastApi`的不足
 
 ```python
 # 名字由来
@@ -35,7 +35,7 @@ async def shutdown():
 
 @app.get("/")
 async def root() -> dict:
-    info = await redis_helper.redis_pool.info()
+    info = await redis_helper.client.info()
     return {"info": info}
 
 if __name__ == '__main__':
@@ -43,11 +43,11 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ### 0.2.route_trie
-python的大多数web框架的路由查找都是遍历整个路由表,如果当前url与路由的注册url正则匹配则查找成功.可以发现发次路由查找的时间复杂度为O(n). 
-猜测之所以用遍历路由表的方法,一个是为了简单,还有就是为了支持`/api/user/{user_id}`的写法.
-可以发现每次路由查找的时间复杂度是O(n), 当路由数量达到一定的程度后,匹配时间就变慢了, 但我们在使用中间件时,如果需要检查是否匹配到路由,那就需要再匹配一次,而这块我们的可以控制的,所以需要优化这里的路由匹配速度.
-
-最快路由匹配速度是dict,但是无法支持类似于`/api/user/{user_id}`的写法,只能另寻他路,好在url天生跟前缀树匹配,所以使用前缀树重构了路由查找,可以尽快的匹配到路由的大致区域,再进行正则匹配,检查路由是否正确.
+通过RouteTrie可以快速的查找路由,同时内置了Contextvars,同一个请求中只查找一次, 极大的优化了查询速度.
+python的大多数web框架的路由查找都是遍历整个路由表,如果当前url与路由的注册url正则匹配则查找成功.不过Web框架查找路由都是用遍历路由表的方法,
+猜测之所以用遍历路由表的方法,一个是为了实现简单,还有就是为了支持`/api/user/{user_id}`的写法.
+可以发现通过遍历路由表来查找路由的时间复杂度是O(n), 当路由数量达到一定的程度后,匹配时间就变慢了, 特别是在使用中间件且需要查找路由时, 还会再查找一次,效率就会变得很低, 所以需要优化,
+然而最快路由匹配速度是dict,但是无法支持类似于`/api/user/{user_id}`的写法,只能另寻他路,好在url天生跟前缀树匹配,所以使用前缀树重构了路由查找,可以尽快的匹配到路由的大致区域,再进行正则匹配,检查路由是否正确.
 ```Python
 from typing import (
     List,
@@ -75,8 +75,7 @@ route_trie.insert_by_app(app)  # 读取app的路由
 
 
 def print_route(route_list: Optional[List[Route]]):
-    """打印路由
-    """
+    """打印路由"""
     if route_list:
         for route in route_list:
             print(f'route:{route} url:{route.path}')
@@ -118,10 +117,6 @@ app.add_route("/metrics", get_metrics)  # 添加metrics的相关url,方便promet
 提供了cbv的支持, 但觉得使用起来不是很方便,所以复用了它的核心代码,并做出了一些修改,可以像`Starlette`使用cbv,同时提供`cbv_decorator`来支持fastapi的其他功能.
 - 适用框架: `FastApi`
 ```python
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-__author__ = 'so1n'
-__date__ = '2020-08'
 from fastapi import FastAPI, Depends, Header, Query
 from fast_tools.cbv import cbv_decorator, Cbv
 
@@ -161,8 +156,12 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 3.config
-- 说明:config提供一个从文件转换为python对象的配置. 由于config基于`Pydantic`和Type Hints, config可以在不需要使用大量的代码量下实现快速转换或检验参数.
+- 说明:config提供一个把配置文件转换为python对象的功能. 由于config基于`Pydantic`和Type Hints, config可以在不需要使用大量的代码量下实现快速转换或检验参数.
 - 适用框架: `FastApi`,`Starlette`
+config支持如下参数:
+- config_file: 配置文件,支持ini和yml文件,如果没填写则从环境变量中拉取数据, 具体可以见[example](https://github.com/so1n/fast-tools/tree/master/example/config)
+- group: group可以指定一个配置分组.在使用ini和yml文件时,支持多个分组配置,如dev配置和test配置.如果参数为空,则会从环境变量中拉取值(如配置了group=test)
+- global_key: 指定哪个分组为全局配置(默认key为group).在使用ini和yml文件时, 支持多个分组配置,同时也有一个全局配置, 该配置可以被多个分组共享(如果该分组没有对应的配置,则会引用到global_key的配置,如果有则不引用)
 ```python
 from typing import List, Optional
 from fast_tools.config import Config
@@ -186,14 +185,15 @@ class MyConfig(Config):
     TEST_LIST_INT: Json[List]
     YML_ES_HOST: Optional[List[str]] = None
     YML_TEST_LIST_INT: Optional[List[int]] = None
+
+MyConfig('./example.yml', group='dev')  # 读取当前目录的example.yaml文件,并读取dev的值
 ```
-config支持如下参数:
-- config_file: 配置文件,支持ini和yml文件,如果没填写则从环境变量中拉取数据(不过只拉取了一个全局字典), 具体可以见[example](https://github.com/so1n/fast-tools/tree/master/example/config)
-- group: group可以指定一个配置分组.在使用ini和yml文件时,支持多个分组配置,如dev配置和test配置.如果你不想在代码中配置该选项,可以直接在环境变量中配置group=test
-- global_key: 指定那个分组为全局配置.在使用ini和yml文件时, 支持多个分组配置,同时也有一个全局配置, 该配置可以被多个分组共享(如果该分组没有对应的配置,则会引用到global_key的配置,如果有则不引用)
 具体使用方法见[example](https://github.com/so1n/fastapi-tools/blob/master/example/config/__init__.py)
 ## 4.context
-- 说明:context利用`contextvars`的特性,调用者可以像flask一样在路由中方便的调用自己需要的东西,而不需要像requests.app.state去调用.而且利用`contextvars`还可以支持type hints,方便重构和编写工程化代码..同时context把`contextvars`的使用方法封装起来,调用者只需要引入context.ContextMiddleware和context.ContextBaseModel即可
+- 说明:context利用`contextvars`的特性,调用者可以像flask一样在路由中方便的调用自己需要的东西,而不需要像requests.app.state去调用.
+而且利用`contextvars`还可以支持type hints,方便重构和编写工程化代码,不过直接使用`contextvars`会写很多代码,并且十分麻烦.通过context把`contextvars`的使用方法封装起来,调用者只需要引入context.ContextMiddleware和context.ContextBaseModel即可,快速的在框架中使用contextvars.
+**备注: 继承ContextBaseModel的类在使用时可以不实例化,但防止覆盖父属性的值,最好是先实例化再使用**
+
 - 适用框架: `FastApi`,`Starlette`
 ```python
 import asyncio
@@ -221,7 +221,7 @@ app: FastAPI = FastAPI()
 
 
 class ContextModel(ContextBaseModel):
-    """对contextvars的封装,需要继承ContextBaseModel,并添加到中间件中,在使用时,不必要实例化"""
+    """对contextvars的封装,需要继承ContextBaseModel,并添加到中间件中"""
     
     # HeaderHelper是一个获取header数据并放置到context中,如果获取不到对应的数据,则会从default_func的返回值获取
     request_id: str = HeaderHelper(
@@ -242,7 +242,7 @@ class ContextModel(ContextBaseModel):
         self.http_client = httpx.AsyncClient()
 
     async def after_response(self, request: Request, response: Response):
-        """执行响应之后会调用的方法"""
+        """执行响应成功之后会调用的方法"""
         pass
 
     async def before_reset_context(self, request: Request, response: Response):
@@ -251,19 +251,20 @@ class ContextModel(ContextBaseModel):
 
 
 #　需要依赖中间件来维护上下文变量,如果其他中间件需要调用到上下文,则需要把该中间件前置
-app.add_middleware(ContextMiddleware, context_model=ContextModel())
+context_model: ContextModel = ContextModel()
+app.add_middleware(ContextMiddleware, context_model=context_model)
 
 
 async def test_ensure_future():
-    print(f'test_ensure_future {ContextModel.http_client}')
+    print(f'test_ensure_future {context_model.http_client}')
 
 
 def test_run_in_executor():
-    print(f'test_run_in_executor {ContextModel.http_client}')
+    print(f'test_run_in_executor {context_model.http_client}')
 
 
 def test_call_soon():
-    print(f'test_call_soon {ContextModel.http_client}')
+    print(f'test_call_soon {context_model.http_client}')
 
 
 @app.get("/")
@@ -280,8 +281,8 @@ async def root():
     await loop.run_in_executor(None, partial(ctx.run, test_run_in_executor))
 
     return {
-        "message": ContextModel.to_dict(is_safe_return=True),  # 只返回可以被转换为json的数据
-        "local_ip": (await ContextModel.http_client.get('http://icanhazip.com')).text
+        "message": context_model.to_dict(is_safe_return=True),  # 只返回可以被转换为json的数据
+        "local_ip": (await context_model.http_client.get('http://icanhazip.com')).text
     }
 
 
@@ -290,10 +291,10 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 5.statsd_middleware
-- 说明:使用方法类似于exporter, 不过多了个`url_replace_handle`来处理url中一些不符合metric的符号
+- 说明:用于把监控数据发送到`StatsD`的中间件,使用方法类似于exporter, 不过多了个`url_replace_handle`来处理url中一些不符合metric的符号
 - 适用框架: `FastApi`,`Starlette`
 ### 5.1安装
-pip install aiostatsd
+pip install aio_statsd   # 推荐下自己的库- -
 ```python
 from typing import Optional
 
@@ -328,9 +329,7 @@ async def root():
 
 
 @app.get("/api/users/{user_id}/items/{item_id}")
-async def read_user_item(
-    user_id: int, item_id: str, q: Optional[str] = None, short: bool = False
-):
+async def read_user_item(user_id: int, item_id: str, q: Optional[str] = None, short: bool = False):
     """
     copy from:https://fastapi.tiangolo.com/tutorial/query-params/#multiple-path-and-query-parameters
     """
@@ -419,7 +418,7 @@ async def root() -> dict:
     return {"timestamp": time.time()}
 
 
-# adter_cache_response_list支持传入函数,并在返回缓存响应前执行他,具体见example的使用方法
+# adter_cache_response_list支持传入函数,并在返回缓存响应前执行他
 # cache_control会在返回缓存响应时,在http头添加缓存时间
 @app.get("/api/users/login")
 @cache(redis_helper, 60, after_cache_response_list=[cache_control]) 
@@ -440,8 +439,31 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 8.limit
-- 说明: 利用常见的限流算法对请求进行限流,并支持不同的用户分组有不同的限流规则.支持装饰器为单一函数或者使用中间件对符合url规则的请求进行限流.backend支持基于内存的令牌桶以及基于redis的令牌桶,cell模块,和窗口限流
+- 说明: 利用常见的限流算法对请求进行限流,并支持每个分组都能拥有自己的不同的限流规则(默认规则组为None,全部url都会被限流).支持装饰器为单一函数或者使用中间件对符合url规则的请求进行限流.backend支持基于内存的令牌桶以及基于redis的令牌桶,cell模块,和窗口限流
 - 适用框架: `FastApi`,`Starlette`
+- API说明:
+    - Rule:
+        - Rule会根据时间参数获取周期时长(单位:s), 时间相关的参数有:second, minute, hour, day, week,如second=1, minute=1时,秒数为61
+        - max_token_num: 最大的token数,当使用令牌桶时,最大的令牌数量为max_token_num
+        - gen_token_num: 每个周期生成的令牌数量
+        - init_token_num: 初始化时的token数量, 不能大于max_token_num
+        - group: 当前规则应用的组,如果不配置则默认为None组
+        - block_time: 当出现不可请求时, 会有block_time秒内无法访问(即使当前有令牌存在)
+    - limit(装饰器函数):
+        - rule_list: 存放`Rule`规则的列表
+        - backend: 可选的限流模式,自带基于内存的令牌桶,基于redis的滑动窗口,令牌桶和redis-cell
+        - limit_func: 该函数用于告诉当前请求的key和group为什么,如果组不确定应该返回`None`
+        - status_code: 返回被限流响应的状态码
+        - content: 返回被限流响应的内容
+        - enable_match_fail_pass: 如果为True时, 即使匹配失败,也会允许访问
+    - LimitMiddleware:
+        - app: 略
+        - rule_list: 存放`Rule`规则的列表, `['*', [rule, rule]]`, 中间件的规则列表稍微有点不同,第一个指为url的正则匹配表达式,第二个值是`Rule`规则数组
+        - backend: 可选的限流模式,自带基于内存的令牌桶,基于redis的滑动窗口,令牌桶和redis-cell
+        - limit_func: 该函数用于告诉当前请求的key和group为什么,如果组不确定应该返回`None`
+        - status_code: 返回被限流响应的状态码
+        - content: 返回被限流响应的内容
+        - enable_match_fail_pass: 如果为True时, 即使匹配失败,也会允许访问
 ```python
 from typing import Optional, Tuple
 
@@ -468,10 +490,10 @@ async def startup():
 app.add_middleware(
     limit.LimitMiddleware,
     func=limit_func,
-    rule_dict={
+    rule_list=[
         # 匹配到url后,会根据不同的group执行不同的限制频率
-        r"^/api": [limit.Rule(second=1, gen_token_num=10, group='admin'), limit.Rule(second=1, group='user')]
-    }
+        (r"^/api", [limit.Rule(second=1, gen_token_num=10, group='admin'), limit.Rule(second=1, group='user')])
+    ]
 )
 
 
@@ -487,9 +509,7 @@ async def root():
 
 
 @app.get("/api/users/{user_id}/items/{item_id}")
-async def read_user_item(
-    user_id: int, item_id: str, q: Optional[str] = None, short: bool = False
-):
+async def read_user_item(user_id: int, item_id: str, q: Optional[str] = None, short: bool = False):
     """
     copy from:https://fastapi.tiangolo.com/tutorial/query-params/#multiple-path-and-query-parameters
     """

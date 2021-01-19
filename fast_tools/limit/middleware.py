@@ -52,7 +52,10 @@ class LimitMiddleware(BaseHTTPMiddleware):
             if pattern.match(url_path):
                 break
         else:
-            return await call_next(request)
+            if self._enable_match_fail_pass:
+                return await call_next(request)
+            else:
+                return Response(content=self._content, status_code=self._status_code)
 
         key: str = str(pattern)
         group: Optional[str] = None

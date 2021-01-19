@@ -36,19 +36,20 @@ class ContextModel(ContextBaseModel):
         await self.http_client.aclose()
 
 
-app.add_middleware(ContextMiddleware, context_model=ContextModel())
+context_model: ContextModel = ContextModel()
+app.add_middleware(ContextMiddleware, context_model=context_model)
 
 
 async def test_ensure_future():
-    print(f"test_ensure_future {ContextModel.http_client}")
+    print(f"test_ensure_future {context_model.http_client}")
 
 
 def test_run_in_executor():
-    print(f"test_run_in_executor {ContextModel.http_client}")
+    print(f"test_run_in_executor {context_model.http_client}")
 
 
 def test_call_soon():
-    print(f"test_call_soon {ContextModel.http_client}")
+    print(f"test_call_soon {context_model.http_client}")
 
 
 @app.get("/")
@@ -60,8 +61,8 @@ async def root():
     ctx: Context = copy_context()
     await loop.run_in_executor(None, partial(ctx.run, test_run_in_executor))
     return {
-        "message": ContextModel.to_dict(is_safe_return=True),  # not return CustomQuery
-        "local_ip": (await ContextModel.http_client.get("http://icanhazip.com")).text,
+        "message": context_model.to_dict(is_safe_return=True),  # not return CustomQuery
+        "local_ip": (await context_model.http_client.get("http://icanhazip.com")).text,
     }
 
 
