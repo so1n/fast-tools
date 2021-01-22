@@ -115,35 +115,36 @@ local tokens
 local bucket = redis.call("hmget", key, "last_time", "last_token")
 local last_time= bucket[1]
 local last_token = bucket[2]
-if last_time== false or last_token == false then
+if last_time == false or last_token == false then
     tokens = init_token
     redis.call('hset', key, 'last_time', current_time)
 else
-    local thisInterval = current_time - tonumber(last_time)
-    if thisInterval > 1 then
-        local tokensToAdd = math.floor(thisInterval * interval_per_token)
-        tokens = math.min(last_token + tokensToAdd, max_token)
+    local this_interval = current_time - tonumber(last_time)
+    if this_interval > 1 then
+        local tokens_to_add = math.floor(this_interval * interval_per_token)
+        tokens = math.min(last_token + tokens_to_add, max_token)
         redis.call('hset', key, 'last_time', current_time)
     else
-        tokens = last_token
+        tokens = tonumber(last_token)
     end
 end
 if tokens < 1 then
     redis.call('hset', key, 'last_token', tokens)
-    return 'false'
+    return -1
 else
-    redis.call('hset', key, 'last_token', tokens - 1)
-    return tokens - 1
+    tokens = tokens - 1
+    redis.call('hset', key, 'last_token', tokens)
+    return tokens
 end
     """
 
     async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         async def _can_requests() -> bool:
-            result = await self._backend.client.eval(
+            now_token: int = await self._backend.client.eval(
                 self._lua_script, keys=[key], args=[time.time(), rule.rate, rule.max_token_num, rule.init_token_num]
             )
             await self._backend.client.expire(key, rule.total_second)
-            return result
+            return now_token >= 0
 
         return await self._block_time_handle(key, rule, _can_requests)
 
