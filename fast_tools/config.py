@@ -1,8 +1,10 @@
+import logging
 import os
 import typing
 import yaml
 from collections.abc import MutableMapping
 from configparser import ConfigParser
+from environs import Env
 from typing import Any, Dict, NoReturn, Optional, Type
 
 from pydantic import BaseModel, create_model
@@ -21,6 +23,13 @@ class Environ(MutableMapping):
     """
 
     def __init__(self, _environ: typing.MutableMapping = os.environ):
+        try:
+            from environs import Env
+            Env().read_env()
+        except ImportError:
+            logging.warn("read .env fail, please run `pip install environs`")
+            pass
+
         self._environ = _environ
         self._has_been_read = set()  # type: typing.Set[typing.Any]
 
