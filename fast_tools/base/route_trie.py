@@ -1,11 +1,10 @@
 from contextvars import ContextVar
-from typing import Dict, List, Union, Optional
+from typing import Dict, List, Optional, Union
 
 from starlette.routing import Match, Route
 from starlette.types import ASGIApp, Scope
 
-
-route_context: ContextVar[Optional[Route]] = ContextVar('route_context', default=None)
+route_context: ContextVar[Optional[Route]] = ContextVar("route_context", default=None)
 
 
 class RouteNode:
@@ -14,18 +13,18 @@ class RouteNode:
         route_list: Optional[List[Route]] = None,
         node: Optional[Dict[str, "RouteNode"]] = None,
     ):
-        self.route_list: Optional[List[Route]] = route_list if route_list else []
-        self.node: Optional[Dict[str, "RouteNode"]] = node if node else {}
+        self.route_list: List[Route] = route_list if route_list else []
+        self.node: Dict[str, "RouteNode"] = node if node else dict()
 
 
 class RouteTrie:
-    def __init__(self):
+    def __init__(self) -> None:
         self.root_node: "RouteNode" = RouteNode()
 
         self.root: Dict[str, Union["RouteTrie", dict, Route, List[Route]]] = {}
         self.route_dict: Dict["RouteTrie", List[Route]] = {}
 
-    def insert_by_app(self, app: ASGIApp):
+    def insert_by_app(self, app: ASGIApp) -> None:
         new_app = app
         while True:
             if hasattr(new_app, "app"):
@@ -36,7 +35,7 @@ class RouteTrie:
             url: str = route.path
             self.insert(url, route)
 
-    def insert(self, url_path: str, route: Route):
+    def insert(self, url_path: str, route: Route) -> None:
         cur_node: "RouteNode" = self.root_node
         for node_url in url_path.strip().split("/"):
             node_url = node_url + "/"

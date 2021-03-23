@@ -1,20 +1,18 @@
 import logging
 import traceback
 from contextvars import ContextVar, Token
-from typing import Any, Callable, Coroutine, Dict, Optional, Set, Type, get_type_hints
+from typing import Any, Callable, Coroutine, Dict, NoReturn, Optional, Set, Type, get_type_hints
 
 from starlette.datastructures import Headers
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 
 from fast_tools.base.utils import NAMESPACE
 
-
 _CAN_JSON_TYPE_SET: Set[type] = {bool, dict, float, int, list, str, tuple, type(None)}
 _CONTEXT_KEY_SET: Set[str] = set()
-_CONTEXT_DICT_TYPE: type = Dict[str, Any]
+_CONTEXT_DICT_TYPE = Dict[str, Any]
 _FAST_TOOLS_CONTEXT: ContextVar[Dict[str, Any]] = ContextVar(f"{NAMESPACE}_context", default={})
 _MISS_OBJECT: object = object()
 _REQUEST_KEY: str = f"{NAMESPACE}_request"
@@ -22,10 +20,11 @@ _REQUEST_KEY: str = f"{NAMESPACE}_request"
 
 class BaseContextHelper(object):
     """context object encapsulation"""
+
     def __init__(self, key: str):
-        self._key: key = key
+        self._key: str = key
         cls: "Type[BaseContextHelper]" = self.__class__
-        key: str = f"{cls.__name__}:{key}"
+        key = f"{cls.__name__}:{key}"
         if key in _CONTEXT_KEY_SET:
             # key must be globally unique
             raise RuntimeError(f"key:{key} already exists")
@@ -36,12 +35,12 @@ class BaseContextHelper(object):
         ctx_dict: _CONTEXT_DICT_TYPE = _FAST_TOOLS_CONTEXT.get()
         return ctx_dict.get(self._key, _MISS_OBJECT)
 
-    def _set_context(self, value: Any):
+    def _set_context(self, value: Any) -> None:
         """set value by key"""
         ctx_dict: _CONTEXT_DICT_TYPE = _FAST_TOOLS_CONTEXT.get()
         ctx_dict[self._key] = value
 
-    def __set__(self, instance: "ContextBaseModel", value: Any):
+    def __set__(self, instance: "ContextBaseModel", value: Any) -> Any:
         self._set_context(value)
 
     def __get__(self, instance: "ContextBaseModel", owner: "Type[ContextBaseModel]") -> Any:
@@ -53,7 +52,7 @@ class HeaderHelper(BaseContextHelper):
         self._default_func: Optional[Callable] = default_func
         super().__init__(key)
 
-    def __set__(self, instance: "ContextBaseModel", value: Any):
+    def __set__(self, instance: "ContextBaseModel", value: Any) -> NoReturn:
         raise NotImplementedError(f"{self.__class__.__name__} not support __set__")
 
     def __get__(self, instance: "ContextBaseModel", owner: "Type[ContextBaseModel]") -> Any:
@@ -96,27 +95,27 @@ class ContextBaseModel(object):
             _dict[key] = value
         return _dict
 
-    async def before_request(self, request: Request):
+    async def before_request(self, request: Request) -> None:
         """Execute before processing the request, usually to initialize the instance"""
         pass
 
-    async def after_response(self, request: Request, response: Response):
+    async def after_response(self, request: Request, response: Response) -> None:
         """Execute after processing the response (if the execution is abnormal, it will not be executed)"""
         pass
 
-    async def before_reset_context(self, request: Request, response: Response):
+    async def before_reset_context(self, request: Request, response: Optional[Response]) -> None:
         """between after response and before reset context execution
-         (regardless of whether the response is an exception)"""
+        (regardless of whether the response is an exception)"""
         pass
 
 
 class ContextMiddleware(BaseHTTPMiddleware):
-    def __init__(self, context_model: ContextBaseModel, *args, **kwargs):
+    def __init__(self, context_model: ContextBaseModel, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.context_model: ContextBaseModel = context_model
 
     @staticmethod
-    async def _safe_context_life_handle(corn: Coroutine):
+    async def _safe_context_life_handle(corn: Coroutine) -> None:
         try:
             await corn
         except Exception as e:

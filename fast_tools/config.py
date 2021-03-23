@@ -1,14 +1,13 @@
 import logging
 import os
 import typing
-import yaml
 from collections.abc import MutableMapping
 from configparser import ConfigParser
+from typing import Any, Dict, NoReturn, Optional, Tuple, Type
+
+import yaml
 from environs import Env
-from typing import Any, Dict, NoReturn, Optional, Type
-
 from pydantic import BaseModel, create_model
-
 
 __all__ = ["Config"]
 
@@ -25,6 +24,7 @@ class Environ(MutableMapping):
     def __init__(self, _environ: typing.MutableMapping = os.environ):
         try:
             from environs import Env
+
             Env().read_env()
         except ImportError:
             logging.warn("read .env fail, please run `pip install environs`")
@@ -59,7 +59,7 @@ environ = Environ()
 
 class Config:
     def __init__(
-        self, config_file: Optional[str] = None, group: Optional[str] = None, global_key: Optional[str] = "global"
+        self, config_file: Optional[str] = None, group: Optional[str] = None, global_key: str = "global"
     ) -> None:
         self._config_dict: Dict[str, Any] = {}
         if group:
@@ -76,8 +76,8 @@ class Config:
             self._config_dict = {key: value for key, value in environ.items()}
         self._init_obj()
 
-    def _init_obj(self):
-        annotation_dict: Dict[str, Type[Any, ...]] = {}
+    def _init_obj(self) -> None:
+        annotation_dict: Dict[str, Tuple[Any, ...]] = {}
         for key in self.__annotations__:
             if key != key.upper():
                 class_name: str = self.__class__.__name__
@@ -89,7 +89,7 @@ class Config:
         dynamic_model: Type[BaseModel] = create_model("DynamicModel", **annotation_dict)
         self.__dict__.update(dynamic_model(**self._config_dict).dict())
 
-    def _read_file(self, file_name: str) -> NoReturn:
+    def _read_file(self, file_name: str) -> None:
         if file_name.endswith(".yml"):
             with open(file_name) as input_file:
                 _dict: Dict[str, Dict[str, Any]] = yaml.load(input_file, Loader=yaml.FullLoader)
@@ -107,7 +107,7 @@ class Config:
                 raise RuntimeError(f"Not support {file_name}")
             raise RuntimeError(f"Not support {suffix}")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(
             [
                 {"name": key, "value": self.__dict__[key], "type": str(type(self.__dict__[key]))}

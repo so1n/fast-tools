@@ -1,6 +1,6 @@
 import asyncio
 from functools import wraps
-from typing import Any, Callable, Dict, TypeVar, Optional
+from typing import Any, Callable, Dict, Optional, TypeVar
 
 __all__ = ("Share", "Token")
 _Tp = TypeVar("_Tp")
@@ -14,7 +14,7 @@ class Token(object):
 
     def can_do(self) -> bool:
         if not self._future:
-            self._future: "asyncio.Future" = asyncio.Future()
+            self._future = asyncio.Future()
             return True
         return False
 
@@ -53,11 +53,11 @@ class Share(object):
             self._future_dict[key] = token
         return self._future_dict[key]
 
-    def cancel(self):
+    def cancel(self) -> None:
         for key, token in self._future_dict.items():
             token.cancel()
 
-    async def delay_del_token(self, key: str):
+    async def delay_del_token(self, key: str) -> None:
         await asyncio.sleep(self._delay_clean_time)
 
         if key in self._future_dict:
@@ -66,8 +66,8 @@ class Share(object):
             raise KeyError(f"not found token:{key}")
 
     async def _token_handle(self, key: str, func: Callable, args: Optional[tuple], kwargs: Optional[dict]) -> Any:
-        args: list = args if args else []
-        kwargs: dict = kwargs if kwargs else {}
+        args = args if args else ()
+        kwargs = kwargs if kwargs else {}
         token: Token = self.get_token(key)
         if token.can_do():
             try:
@@ -78,23 +78,23 @@ class Share(object):
                 raise e
         return await token.await_done()
 
-    async def do(self, key: str, func: Callable, args: Optional[list] = None, kwargs: Optional[dict] = None) -> Any:
+    async def do(self, key: str, func: Callable, args: Optional[tuple] = None, kwargs: Optional[dict] = None) -> Any:
         return await self._token_handle(key, func, args, kwargs)
 
-    def wrapper_do(self, key: Optional[str] = None):
-        def wrapper(func: Callable):
+    def wrapper_do(self, key: Optional[str] = None) -> Callable:
+        def wrapper(func: Callable) -> Callable:
             if key is None:
                 key_name: str = func.__name__ + str(id(func))
             else:
-                key_name: str = key
+                key_name = key
 
             @wraps(func)
-            async def wrapper_func(*args, **kwargs):
+            async def wrapper_func(*args: Any, **kwargs: Any) -> Any:
                 return await self._token_handle(key_name, func, args, kwargs)
 
             return wrapper_func
 
         return wrapper
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self._future_dict)

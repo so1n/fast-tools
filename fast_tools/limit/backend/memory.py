@@ -1,10 +1,11 @@
-import time
 import threading
+import time
 from dataclasses import dataclass
 from typing import Optional
 
 from fast_tools.base import LRUCache
 from fast_tools.limit.rule import Rule
+
 from .base import BaseLimitBackend
 
 
@@ -18,7 +19,7 @@ class Bucket(object):
 
 
 class TokenBucket(BaseLimitBackend):
-    def __init__(self):
+    def __init__(self) -> None:
         self._cache_dict: LRUCache[str, "Bucket"] = LRUCache(10000)
 
     @staticmethod
@@ -77,7 +78,7 @@ class TokenBucket(BaseLimitBackend):
 
 
 class ThreadingTokenBucket(TokenBucket):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._lock: "threading.Lock" = threading.Lock()
 

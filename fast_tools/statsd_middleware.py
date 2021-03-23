@@ -1,14 +1,13 @@
 import time
 from typing import Callable, Optional, Set
 
-from aio_statsd import StatsdClient
-
+from aio_statsd import StatsdClient  # type: ignore
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
-from fast_tools.base import NAMESPACE, RouteTrie, BaseSearchRouteMiddleware
+from fast_tools.base import NAMESPACE, BaseSearchRouteMiddleware, RouteTrie
 
 
 class StatsdMiddleware(BaseSearchRouteMiddleware):
@@ -24,7 +23,7 @@ class StatsdMiddleware(BaseSearchRouteMiddleware):
         block_url_set: Optional[Set[str]] = None,
     ) -> None:
         super().__init__(app, route_trie=route_trie)
-        self._block_url_set = block_url_set
+        self._block_url_set: Set[str] = block_url_set or set()
         self._client: StatsdClient = client
         self._metric = ""
         self._url_replace_handle = url_replace_handle

@@ -2,8 +2,7 @@ import asyncio
 import re
 from typing import Awaitable, Dict, List, Optional, Tuple, Union
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
@@ -24,7 +23,7 @@ class LimitMiddleware(BaseHTTPMiddleware):
         content: str = DEFAULT_CONTENT,
         limit_func: Optional[RULE_FUNC_TYPE] = None,
         rule_list: List[Tuple[str, List[Rule]]] = None,
-        enable_match_fail_pass: bool = True
+        enable_match_fail_pass: bool = True,
     ) -> None:
         """
         rule_list: [url re rule, [rule obj list]]

@@ -2,13 +2,12 @@ from collections import OrderedDict
 from threading import Lock
 from typing import Any, Optional
 
-
 __all__ = ["LRUCache"]
 _MISS_OBJECT = object()
 
 
 class LRUCache:
-    def __init__(self, capacity: int):
+    def __init__(self, capacity: int) -> None:
         self.capacity: int = capacity
         self.cache: OrderedDict[Any, Any] = OrderedDict()
         self._lock: Lock = Lock()

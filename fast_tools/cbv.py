@@ -1,12 +1,10 @@
 import inspect
+from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Type, Union, get_type_hints
 
-from typing import Any, Callable, Dict, List, Optional, Set, Sequence, Type, Union, get_type_hints
-
-from fastapi import APIRouter, Response, params, Depends
+from fastapi import APIRouter, Depends, Response, params
 from fastapi.encoders import DictIntStrAny, SetIntStr
 from fastapi.routing import APIRoute
 from pydantic.typing import is_classvar
-
 
 __all__ = ["Cbv", "cbv_decorator"]
 METHOD_SET: Set[str] = {"get", "post", "head", "options", "put", "patch", "delete"}
@@ -74,7 +72,7 @@ def cbv_decorator(
 
 
 class Cbv(object):
-    def __init__(self, obj, url: str = "/"):
+    def __init__(self, obj: Type, url: str = "/") -> None:
         self._url: str = url
         self.router: APIRouter = APIRouter()
         self._obj: Type = obj
@@ -82,17 +80,14 @@ class Cbv(object):
         self._init_obj()
         self._add_router()
 
-    def _add_router(self):
+    def _add_router(self) -> None:
         for _dir in dir(self._obj):
             if _dir not in METHOD_SET:
                 continue
 
             func: Callable = getattr(self._obj, _dir)
-            func_attributes: Dict[str, Any] = ROUTE_ATTRIBUTES_DICT.get(func.__qualname__, None)
-            if func_attributes is not None:
-                kwargs: Dict[str, Any] = func_attributes
-            else:
-                kwargs: Dict[str, Any] = {}
+            kwargs: Dict[str, Any] = ROUTE_ATTRIBUTES_DICT.get(func.__qualname__, {})
+
             kwargs["methods"] = [_dir.upper()]
 
             attributes: str = f"{self._obj.__name__}.{func.__name__}"

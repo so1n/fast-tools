@@ -29,16 +29,17 @@ def background_task(
     key: task key, if key is empty, key is func name
     logger: python logging logger
     enable_raise: if enable_raise is not empty, it will report an error directly instead of retrying
-    max_retry: If max_retry is not empty, the number of task cycles will be limited 
+    max_retry: If max_retry is not empty, the number of task cycles will be limited
     """
+
     def decorator(func: Union[AsyncFuncT, FuncT]) -> AsyncFuncT:
         @wraps(func)
-        async def wrapped():
+        async def wrapped() -> Callable:
             nonlocal key
             if key is None:
                 key = func.__name__
 
-            async def job():
+            async def job() -> None:
                 retry_cnt = 0
                 while max_retry is None or retry_cnt < max_retry:
                     try:
@@ -52,7 +53,7 @@ def background_task(
                             raise e
                         else:
                             retry_cnt += 1
-                            future = future_dict.get(key, None)
+                            future: asyncio.Future = future_dict.get(key, None)
                             if future:
                                 future.set_exception(e)
                     await asyncio.sleep(retry_cnt * retry_cnt)
@@ -67,9 +68,9 @@ def background_task(
                         else:
                             logging.error(format_e)
 
-            async def task_loop():
+            async def task_loop() -> None:
                 while True:
-                    future = future_dict.get(key, None)
+                    future: asyncio.Future = future_dict.get(key, None)
                     if future is not None:
                         if future.cancelled():
                             future.cancel()
@@ -90,7 +91,7 @@ def background_task(
     return decorator
 
 
-def _stop_task(key: str, future: asyncio.Future):
+def _stop_task(key: str, future: asyncio.Future) -> None:
     if not future.cancelled():
         future.cancel()
         logging.info(f"stop task:{key}")
@@ -100,7 +101,7 @@ def _stop_task(key: str, future: asyncio.Future):
         logging.warning(f"{key} can't stop")
 
 
-def stop_task(key: Optional[str] = None):
+def stop_task(key: Optional[str] = None) -> None:
     if key:
         if key in future_dict:
             future = future_dict[key]

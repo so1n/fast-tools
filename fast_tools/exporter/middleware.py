@@ -1,13 +1,13 @@
 import time
 from typing import Optional, Set
 
-from prometheus_client import Counter, Gauge, Histogram
+from prometheus_client import Counter, Gauge, Histogram  # type: ignore
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
 
-from fast_tools.base import BaseSearchRouteMiddleware, NAMESPACE, RouteTrie
+from fast_tools.base import NAMESPACE, BaseSearchRouteMiddleware, RouteTrie
 
 
 class PrometheusMiddleware(BaseSearchRouteMiddleware):

@@ -1,12 +1,13 @@
 import asyncio
 from functools import wraps
-from typing import Awaitable, Callable, List, Optional, Union
+from typing import Any, Awaitable, Callable, List, Optional, Union
 
 from starlette.requests import Request
 from starlette.responses import Response
-from fast_tools.limit.rule import Rule
+
 from fast_tools.limit.backend.base import BaseLimitBackend
 from fast_tools.limit.backend.memory import TokenBucket
+from fast_tools.limit.rule import Rule
 from fast_tools.limit.util import DEFAULT_CONTENT, DEFAULT_STATUS_CODE, RULE_FUNC_TYPE
 
 
@@ -16,8 +17,8 @@ def limit(
     limit_func: Optional[RULE_FUNC_TYPE] = None,
     status_code: int = DEFAULT_STATUS_CODE,
     content: str = DEFAULT_CONTENT,
-    enable_match_fail_pass: bool = True
-):
+    enable_match_fail_pass: bool = True,
+) -> Callable:
     """
     rule_list: Rule obj list
     backend: Current limiting method
@@ -27,9 +28,10 @@ def limit(
     enable_match_fail_pass: if not match and `enable_match_fail_pass` is False,
      If the match fails, the flow is not limited
     """
+
     def wrapper(func: Callable) -> Callable:
         @wraps(func)
-        async def _limit(*args, **kwargs):
+        async def _limit(*args: Any, **kwargs: Any) -> Any:
             # get request param
             request: Optional[Request] = None
             for arg in args:

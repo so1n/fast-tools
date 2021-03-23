@@ -13,8 +13,8 @@ class Rule(object):
     week: int = 0
 
     # token config
-    max_token_num: Optional[int] = 100    # Maximum number of tokens per bucket
-    gen_token_num: int = 1                # The number of tokens generated per unit time
+    max_token_num: Optional[int] = 100  # Maximum number of tokens per bucket
+    gen_token_num: int = 1  # The number of tokens generated per unit time
     init_token_num: Optional[int] = None  # The initial number of tokens in the bucket
 
     group: Optional[str] = None
@@ -23,8 +23,8 @@ class Rule(object):
     total_second: float = 0
     rate: float = 0
 
-    def __post_init__(self):
-        if not self.init_token_num or self.init_token_num > self.max_token_num:
+    def __post_init__(self) -> None:
+        if not self.init_token_num or (self.init_token_num is not None and self.init_token_num > self.max_token_num):
             self.init_token_num = self.max_token_num
 
         # How long does it take to generate token
