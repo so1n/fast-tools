@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 __author__ = "so1n"
 __date__ = "2020-08"
-from fastapi import FastAPI, Depends, Header, Query
-from fast_tools.cbv import cbv_decorator, Cbv
+from fastapi import Depends, FastAPI, Header, Query
+
+from fast_tools.cbv import Cbv, cbv_decorator
 
 app: FastAPI = FastAPI()
 
@@ -33,6 +34,6 @@ class TestCbv(object):
 app.include_router(Cbv(TestCbv).router)
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
 
     uvicorn.run(app)

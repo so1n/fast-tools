@@ -1,14 +1,14 @@
 import logging
-from datetime import time, date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from functools import singledispatch
 from typing import Any, Union
 
 try:
-    import ojson as json
+    import ojson as json  # type: ignore
 except ImportError:
     try:
-        import ujson as json
+        import ujson as json  # type: ignore
     except ImportError:
         import json
 
@@ -20,17 +20,17 @@ def json_default(obj: Any) -> Any:
 
 @json_default.register(datetime)
 def _datetime(obj: Any) -> str:
-    return obj.strftime('%Y-%m-%d %H:%M:%S')
+    return obj.strftime("%Y-%m-%d %H:%M:%S")
 
 
 @json_default.register(date)
 def _date(obj: Any) -> str:
-    return obj.strftime('%Y-%m-%d')
+    return obj.strftime("%Y-%m-%d")
 
 
 @json_default.register(time)
 def _time(obj: Any) -> str:
-    return obj.strftime('%H:%M:%S')
+    return obj.strftime("%H:%M:%S")
 
 
 @json_default.register(Decimal)
@@ -53,23 +53,3 @@ def dumps(obj: Any, **kwargs: Any) -> str:
 def loads(json_str: str, **kwargs: Any) -> Any:
     """JSON loads function"""
     return json.loads(json_str, **kwargs)
-
-
-def test():
-    """Test function"""
-    testcase = loads('''{"A":["B", "C", {"D":["E", "F"], "I": 123, "J": 321.0,
-        "K": null, "L": true}],"M": false, "O": null,
-        "P": "2015-12-03 11:11:11"}''')
-
-    print(testcase)
-
-    testcase['Q'] = Decimal('1')
-    testcase['R'] = Decimal('1.01')
-    testcase['S'] = datetime.now()
-    testcase['T'] = Decimal('nan')
-
-    print(dumps(testcase))
-
-
-if __name__ == '__main__':
-    test()

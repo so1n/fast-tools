@@ -18,8 +18,8 @@ print(project_name)  # 'fast-tools'
 ```python
 import aioredis
 from fastapi import FastAPI
-from fast_tools.base import RedisHelper
 
+from fast_tools.base import RedisHelper
 
 app: 'FastApi' = FastAPI()
 redis_helper: 'RedisHelper' = RedisHelper()  # init object
@@ -38,7 +38,7 @@ async def shutdown():
 
 @app.get("/")
 async def root() -> dict:
-    info = await redis_helper.redis_pool.info()
+    info = await redis_helper.client.info()
     return {"info": info}
 
 if __name__ == '__main__':
@@ -172,9 +172,10 @@ if __name__ == '__main__':
 - applicable framework: `FastApi`,`Starlette`
 ```python
 from typing import List, Optional
-from fast_tools.config import Config
 
 from pydantic.fields import Json
+
+from fast_tools.config import Config
 
 
 class MyConfig(Config):

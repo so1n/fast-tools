@@ -1,7 +1,8 @@
 import time
+
 from fastapi import FastAPI
-from fast_tools.task import background_task
-from fast_tools.task import stop_task
+
+from fast_tools.task import background_task, stop_task
 
 app: "FastAPI" = FastAPI()
 
@@ -16,6 +17,6 @@ app.on_event("shutdown")(stop_task)
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
 
     uvicorn.run(app)

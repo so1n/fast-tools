@@ -1,6 +1,6 @@
 import asyncio
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, TypeVar
+from typing import Any, Callable, Dict, Optional, TypeVar, Union
 
 __all__ = ("Share", "Token")
 _Tp = TypeVar("_Tp")
@@ -65,7 +65,9 @@ class Share(object):
         else:
             raise KeyError(f"not found token:{key}")
 
-    async def _token_handle(self, key: str, func: Callable, args: Optional[tuple], kwargs: Optional[dict]) -> Any:
+    async def _token_handle(
+        self, key: str, func: Callable, args: Optional[Union[list, tuple]], kwargs: Optional[dict]
+    ) -> Any:
         args = args if args else ()
         kwargs = kwargs if kwargs else {}
         token: Token = self.get_token(key)
@@ -78,7 +80,9 @@ class Share(object):
                 raise e
         return await token.await_done()
 
-    async def do(self, key: str, func: Callable, args: Optional[tuple] = None, kwargs: Optional[dict] = None) -> Any:
+    async def do(
+        self, key: str, func: Callable, args: Optional[Union[list, tuple]] = None, kwargs: Optional[dict] = None
+    ) -> Any:
         return await self._token_handle(key, func, args, kwargs)
 
     def wrapper_do(self, key: Optional[str] = None) -> Callable:

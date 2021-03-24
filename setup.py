@@ -18,4 +18,10 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    extras_require={
+        "prometheus": ["prometheus-client==0.8.0"],
+        "pydantic": ["pydantic==1.7.20"],
+        "redis": ["aioredis==1.3.1"],
+        "statsd": ["aio_statsd==0.2.2.2"],
+    },
 )

@@ -15,8 +15,8 @@ print(project_name)  # 'fast-tools'
 ```python
 import aioredis
 from fastapi import FastAPI
-from fast_tools.base import RedisHelper
 
+from fast_tools.base import RedisHelper
 
 app: 'FastApi' = FastAPI()
 redis_helper: 'RedisHelper' = RedisHelper()  # 初始化对象
@@ -49,12 +49,11 @@ python的大多数web框架的路由查找都是遍历整个路由表,如果当�
 可以发现通过遍历路由表来查找路由的时间复杂度是O(n), 当路由数量达到一定的程度后,匹配时间就变慢了, 特别是在使用中间件且需要查找路由时, 还会再查找一次,效率就会变得很低, 所以需要优化,
 然而最快路由匹配速度是dict,但是无法支持类似于`/api/user/{user_id}`的写法,只能另寻他路,好在url天生跟前缀树匹配,所以使用前缀树重构了路由查找,可以尽快的匹配到路由的大致区域,再进行正则匹配,检查路由是否正确.
 ```Python
-from typing import (
-    List,
-    Optional
-)
+from typing import List, Optional
+
 from fastapi import FastAPI
 from starlette.routing import Route
+
 from fast_tools.base import RouteTrie
 
 app: 'FastAPI' = FastAPI()
@@ -91,13 +90,13 @@ print_route(route_trie.search('/api/users/login'))
 - 说明: 一个可用于 `Starlette` 和 `FastAPI`的prometheus exporter中间件,可以监控各个url的状态`, 如连接次数,响应次数,请求时间,错误次数,当前请求数.
 - 适用框架: `FastApi`,`Starlette`
 ### 1.1 安装
-pip install prometheus_client
+`pip install prometheus_client` or `pip install fast_tools[prometheus]` or `poetry install -E prometheus`
 ### 1.2 使用
 ```python
 from fastapi import FastAPI
-from fast_tools.exporter import PrometheusMiddleware, get_metrics
-from fast_tools.base.route_trie import RouteTrie
 
+from fast_tools.base.route_trie import RouteTrie
+from fast_tools.exporter import PrometheusMiddleware, get_metrics
 
 app = FastAPI()
 route_trie = RouteTrie()
@@ -117,8 +116,9 @@ app.add_route("/metrics", get_metrics)  # 添加metrics的相关url,方便promet
 提供了cbv的支持, 但觉得使用起来不是很方便,所以复用了它的核心代码,并做出了一些修改,可以像`Starlette`使用cbv,同时提供`cbv_decorator`来支持fastapi的其他功能.
 - 适用框架: `FastApi`
 ```python
-from fastapi import FastAPI, Depends, Header, Query
-from fast_tools.cbv import cbv_decorator, Cbv
+from fastapi import Depends, FastAPI, Header, Query
+
+from fast_tools.cbv import Cbv, cbv_decorator
 
 app = FastAPI()
 
@@ -156,6 +156,10 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 3.config
+
+### 3.1 安装
+`pip install pydantic` or `pip install fast_tools[pydantic]` or `poetry install -E pydantic`
+### 3.2 使用
 - 说明:config提供一个把配置文件转换为python对象的功能. 由于config基于`Pydantic`和Type Hints, config可以在不需要使用大量的代码量下实现快速转换或检验参数.
 - 适用框架: `FastApi`,`Starlette`
 config支持如下参数:
@@ -164,9 +168,10 @@ config支持如下参数:
 - global_key: 指定哪个分组为全局配置(默认key为group).在使用ini和yml文件时, 支持多个分组配置,同时也有一个全局配置, 该配置可以被多个分组共享(如果该分组没有对应的配置,则会引用到global_key的配置,如果有则不引用)
 ```python
 from typing import List, Optional
-from fast_tools.config import Config
 
 from pydantic.fields import Json
+
+from fast_tools.config import Config
 
 
 class MyConfig(Config):
@@ -195,27 +200,17 @@ MyConfig('./example.yml', group='dev')  # 读取当前目录的example.yaml文�
 **备注: 继承ContextBaseModel的类在使用时可以不实例化,但防止覆盖父属性的值,最好是先实例化再使用**
 
 - 适用框架: `FastApi`,`Starlette`
+
 ```python
 import asyncio
-import httpx
 import uuid
-from contextvars import (
-    copy_context,
-    Context
-)
+from contextvars import Context, copy_context
 from functools import partial
-from fastapi import (
-    FastAPI,
-    Request,
-    Response
-)
-from fast_tools.context import (
-    ContextBaseModel,
-    ContextMiddleware,
-    CustomHelper,
-    HeaderHelper,
-)
 
+import httpx
+from fastapi import FastAPI, Request, Response
+
+from fast_tools.context import ContextBaseModel, ContextMiddleware, CustomHelper, HeaderHelper
 
 app: FastAPI = FastAPI()
 
@@ -294,14 +289,15 @@ if __name__ == '__main__':
 - 说明:用于把监控数据发送到`StatsD`的中间件,使用方法类似于exporter, 不过多了个`url_replace_handle`来处理url中一些不符合metric的符号
 - 适用框架: `FastApi`,`Starlette`
 ### 5.1安装
-pip install aio_statsd   # 推荐下自己的库- -
+`pip install aio_statsd` or `pip install fast_tools[statsd]` or `poetry install -E statsd`
+### 5.2使用
 ```python
 from typing import Optional
 
 from fastapi import FastAPI
-from fast_tools.statsd_middleware import StatsdClient, StatsdMiddleware
-from fast_tools.base.route_trie import RouteTrie
 
+from fast_tools.base.route_trie import RouteTrie
+from fast_tools.statsd_middleware import StatsdClient, StatsdMiddleware
 
 app = FastAPI()
 client = StatsdClient()
@@ -357,9 +353,10 @@ if __name__ == '__main__':
 - 适用框架: `FastApi`,`Starlette`
 ```python
 import time
+
 from fastapi import FastAPI
-from fast_tools.task import background_task
-from fast_tools.task import stop_task
+
+from fast_tools.task import background_task, stop_task
 
 app = FastAPI()
 
@@ -390,11 +387,7 @@ from fastapi import FastAPI
 from starlette.responses import JSONResponse
 
 from fast_tools.base import RedisHelper
-from fast_tools.cache import (
-    cache,
-    cache_control
-)
-
+from fast_tools.cache import cache, cache_control
 
 app = FastAPI()
 redis_helper: 'RedisHelper' = RedisHelper()
@@ -469,8 +462,9 @@ from typing import Optional, Tuple
 
 import aioredis
 from fastapi import FastAPI, Request
-from fast_tools.base import RedisHelper
+
 from fast_tools import limit
+from fast_tools.base import RedisHelper
 
 
 def limit_func(requests: Request) -> Tuple[str, str]:

@@ -1,13 +1,13 @@
 import datetime
 from decimal import Decimal
-from fast_tools import customer_json as json
 
+from fast_tools import customer_json as json
 
 test_dict: dict = {
     "datetime": datetime.datetime.now(),
     "date": datetime.datetime.now().date(),
-    "decimal": Decimal('1.01'),
-    "time": datetime.time()
+    "decimal": Decimal("1.01"),
+    "time": datetime.time(),
 }
 
 print(json.dumps(test_dict))

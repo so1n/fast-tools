@@ -14,9 +14,10 @@ example run output:
 ]
 """
 from typing import List, Optional
-from fast_tools.config import Config
 
 from pydantic.fields import Json
+
+from fast_tools.config import Config
 
 
 class MyConfig(Config):
@@ -37,7 +38,7 @@ class MyConfig(Config):
     YML_TEST_LIST_INT: Optional[List[int]] = None
 
 
-def main(config_path: str, group: str):
+def main(config_path: str, group: str) -> None:
     print(config_path, MyConfig(config_path, group=group))
 
 

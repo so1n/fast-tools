@@ -1,9 +1,9 @@
 from typing import Optional
 
 from fastapi import FastAPI
-from fast_tools.statsd_middleware import StatsdClient, StatsdMiddleware
-from fast_tools.base import RouteTrie
 
+from fast_tools.base import RouteTrie
+from fast_tools.statsd_middleware import StatsdClient, StatsdMiddleware
 
 app: "FastAPI" = FastAPI()
 client: "StatsdClient" = StatsdClient()
@@ -20,7 +20,7 @@ app.on_event("shutdown")(client.close)
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     await client.connect()
     route_trie.insert_by_app(app)
 
@@ -49,6 +49,6 @@ async def user_login() -> str:
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
 
     uvicorn.run(app)

@@ -1,9 +1,10 @@
 from typing import Optional, Tuple
 
-import aioredis
+import aioredis  # type: ignore
 from fastapi import FastAPI, Request
-from fast_tools.base import RedisHelper
+
 from fast_tools import limit
+from fast_tools.base import RedisHelper
 
 
 def limit_func(requests: Request) -> Tuple[str, str]:
@@ -15,7 +16,7 @@ redis_helper: "RedisHelper" = RedisHelper()
 
 
 @app.on_event("startup")
-async def startup():
+async def startup() -> None:
     redis_helper.init(await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"))
 
 
@@ -37,7 +38,7 @@ async def root() -> dict:
 
 
 @app.get("/api/users/{user_id}/items/{item_id}")
-async def read_user_item(user_id: int, item_id: str, q: Optional[str] = None, short: bool = False):
+async def read_user_item(user_id: int, item_id: str, q: Optional[str] = None, short: bool = False) -> dict:
     """
     copy from:https://fastapi.tiangolo.com/tutorial/query-params/#multiple-path-and-query-parameters
     """
@@ -55,6 +56,6 @@ async def user_login() -> str:
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
 
     uvicorn.run(app)

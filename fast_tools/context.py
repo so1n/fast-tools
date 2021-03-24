@@ -46,6 +46,10 @@ class BaseContextHelper(object):
     def __get__(self, instance: "ContextBaseModel", owner: "Type[ContextBaseModel]") -> Any:
         return self._get_context()
 
+    @classmethod
+    def i(cls, key: str) -> Any:
+        return cls(key)
+
 
 class HeaderHelper(BaseContextHelper):
     def __init__(self, key: str, default_func: Optional[Callable] = None):
@@ -78,6 +82,10 @@ class HeaderHelper(BaseContextHelper):
         # set header value to context
         self._set_context(value)
         return value
+
+    @classmethod
+    def i(cls, key: str, default_func: Optional[Callable] = None) -> Any:
+        return cls(key, default_func)
 
 
 class CustomHelper(BaseContextHelper):

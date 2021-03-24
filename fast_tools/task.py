@@ -34,7 +34,7 @@ def background_task(
 
     def decorator(func: Union[AsyncFuncT, FuncT]) -> AsyncFuncT:
         @wraps(func)
-        async def wrapped() -> Callable:
+        async def wrapped() -> None:
             nonlocal key
             if key is None:
                 key = func.__name__

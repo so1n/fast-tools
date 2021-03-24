@@ -1,11 +1,12 @@
-import aioredis
 import asyncio
-
 from typing import Any, Dict
+
+import aioredis  # type: ignore
+
 from fast_tools.base import RedisHelper
 
 
-async def test_redis_helper():
+async def test_redis_helper() -> None:
     redis: "RedisHelper" = RedisHelper(
         await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8")
     )

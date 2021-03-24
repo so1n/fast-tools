@@ -1,9 +1,9 @@
 from typing import Optional
 
 from fastapi import FastAPI
-from fast_tools.exporter import get_metrics, PrometheusMiddleware
-from fast_tools.base import RouteTrie
 
+from fast_tools.base import RouteTrie
+from fast_tools.exporter import PrometheusMiddleware, get_metrics
 
 app: "FastAPI" = FastAPI()
 route_trie: "RouteTrie" = RouteTrie()
@@ -14,17 +14,17 @@ app.add_route("/metrics", get_metrics)
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     route_trie.insert_by_app(app)
 
 
 @app.get("/")
-async def root():
+async def root() -> None:
     return {"Hello": "World"}
 
 
 @app.get("/api/users/{user_id}/items/{item_id}")
-async def read_user_item(user_id: int, item_id: str, q: Optional[str] = None, short: bool = False):
+async def read_user_item(user_id: int, item_id: str, q: Optional[str] = None, short: bool = False) -> dict:
     """
     copy from:https://fastapi.tiangolo.com/tutorial/query-params/#multiple-path-and-query-parameters
     """
@@ -37,11 +37,11 @@ async def read_user_item(user_id: int, item_id: str, q: Optional[str] = None, sh
 
 
 @app.get("/api/users/login")
-async def user_login():
+async def user_login() -> str:
     return "ok"
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
 
     uvicorn.run(app)

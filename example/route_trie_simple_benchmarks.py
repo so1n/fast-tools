@@ -5,12 +5,12 @@
 1.396694214876033
 """
 import time
+
 from starlette.applications import Starlette
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
-from starlette.routing import Route, Match
+from starlette.routing import Match, Route
 from starlette.types import ASGIApp
 
 from fast_tools.base import RouteTrie
@@ -20,8 +20,7 @@ class TestMiddleware(BaseHTTPMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        *,
-        route_trie: RouteTrie = None,
+        route_trie: RouteTrie,
     ) -> None:
         super().__init__(app)
         self._route_trie: RouteTrie = route_trie
@@ -33,7 +32,7 @@ class TestMiddleware(BaseHTTPMiddleware):
         self._route_trie.search_by_scope(url_path, request.scope)
         route_trie_speed_time: float = time.time() - start_time
 
-        start_time: float = time.time()
+        start_time = time.time()
         for route in request.app.routes:
             match, child_scope = route.matches(request.scope)
             if match == Match.FULL:
@@ -55,7 +54,7 @@ app = Starlette(
 app.add_middleware(TestMiddleware, route_trie=route_trie)
 
 
-async def load_route_trie():
+async def load_route_trie() -> None:
     route_trie.insert_by_app(app)
 
 
@@ -63,6 +62,6 @@ app.on_event("startup")(load_route_trie)
 
 
 if __name__ == "__main__":
-    import uvicorn
+    import uvicorn  # type: ignore
 
     uvicorn.run(app)

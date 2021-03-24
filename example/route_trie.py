@@ -1,6 +1,8 @@
 from typing import List, Optional
+
 from fastapi import FastAPI
 from starlette.routing import Route
+
 from fast_tools.base import RouteTrie
 
 app: "FastAPI" = FastAPI()
@@ -20,7 +22,7 @@ route_trie: RouteTrie = RouteTrie()
 route_trie.insert_by_app(app)
 
 
-def print_route(route_list: Optional[List[Route]]):
+def print_route(route_list: Optional[List[Route]]) -> None:
     if route_list:
         for route in route_list:
             print(f"route:{route} url:{route.path}")
