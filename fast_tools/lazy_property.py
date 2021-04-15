@@ -1,32 +1,45 @@
 import asyncio
 from concurrent import futures
-from typing import Any, Callable, Optional, Union, Type
+from typing import Any, Callable, Optional, Type
+
+
+class _FakeClass:
+    pass
 
 
 class LazyProperty:
+    def __init__(self, is_class_func: bool = False):
+        self._is_class_func: bool = is_class_func
+        self._class: Any = _FakeClass()
 
     def __call__(self, func: Callable) -> Callable:
         if not asyncio.iscoroutinefunction(func):
-            future: Union[futures.Future, asyncio.Future] = futures.Future()
-
             def wrapper(*args: Any, **kwargs: Any) -> Any:
-                if future.done():
-                    return future.result()
-                result: Any = func(*args, **kwargs)
-                future.set_result(result)
-                return result
-
+                class_: Any = args[0] if self._is_class_func else self._class
+                future: Optional[futures.Future] = getattr(
+                    class_, f"{self.__class__.__name__}_{func.__name__}_future", None
+                )
+                if not future:
+                    future = futures.Future()
+                    result: Any = func(*args, **kwargs)
+                    future.set_result(result)
+                    setattr(class_, f"{self.__class__.__name__}_{func.__name__}_future", future)
+                    return result
+                return future.result()
             return wrapper
         else:
-            future = asyncio.Future()
-
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-                if future.done():
-                    return future.result()
-                result: Any = await func(*args, **kwargs)
-                future.set_result(result)
-                return result
-
+                class_: Type = args[0] if self._is_class_func else self._class
+                future: Optional[asyncio.Future] = getattr(
+                    class_, f"{self.__class__.__name__}_{func.__name__}_future", None
+                )
+                if not future:
+                    future = asyncio.Future()
+                    result: Any = await func(*args, **kwargs)
+                    future.set_result(result)
+                    setattr(class_, f"{self.__class__.__name__}_{func.__name__}_future", future)
+                    return result
+                return future.result()
             return async_wrapper
 
 
