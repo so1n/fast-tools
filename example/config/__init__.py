@@ -13,6 +13,7 @@ example run output:
     {'name': 'ES_HOST', 'value': ['127.0.0.1:9200', '127.0.0.2:9200'], 'type': <class 'list'>}
 ]
 """
+from __future__ import annotations
 from typing import List, Optional
 
 from pydantic.fields import Json

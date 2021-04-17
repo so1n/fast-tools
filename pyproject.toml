@@ -17,6 +17,7 @@ pydantic = {version = "^1.8.1", optional = true }
 environs = {version = "^9.3.1", optional = true }
 ojson = {version = "^0.1.0", optional = true }
 ujson = {version = "^4.0.2", optional = true }
+PyYAML = "^5.4.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.2"

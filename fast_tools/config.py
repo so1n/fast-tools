@@ -1,9 +1,10 @@
 import logging
+import sys
 import os
 import typing
 from collections.abc import MutableMapping
 from configparser import ConfigParser
-from typing import Any, Dict, NoReturn, Optional, Tuple, Type
+from typing import Any, Dict, NoReturn, Optional, Tuple, Type, ForwardRef
 
 import yaml
 from environs import Env
@@ -84,7 +85,11 @@ class Config:
                 raise KeyError(f"key: {class_name}.{key} must like {class_name}.{key.upper()}")
             if key not in self._config_dict:
                 self._config_dict[key] = getattr(self, key, ...)
-            annotation_dict[key] = (self.__annotations__[key], ...)
+            annotation: Union[str, Typr] = self.__annotations__[key]
+            if isinstance(annotation, str):
+                value: ForwardRef = ForwardRef(annotation, is_argument=False)
+                annotation = value._evaluate(sys.modules[self.__module__].__dict__, None)  # type: ignore
+            annotation_dict[key] = (annotation, ...)
 
         dynamic_model: Type[BaseModel] = create_model("DynamicModel", **annotation_dict)
         self.__dict__.update(dynamic_model(**self._config_dict).dict())
