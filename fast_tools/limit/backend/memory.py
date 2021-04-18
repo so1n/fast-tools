@@ -6,7 +6,7 @@ from typing import Optional
 from fast_tools.base import LRUCache
 from fast_tools.limit.rule import Rule
 
-from .base import BaseLimitBackend
+from .base import BaseLimitBackend  # type: ignore
 
 
 @dataclass
@@ -14,13 +14,13 @@ class Bucket(object):
     rate: float
     token_num: int
     max_token_num: int
-    block_time: float
+    block_time: Optional[float]
     block_timestamp: float = 0
 
 
 class TokenBucket(BaseLimitBackend):
     def __init__(self) -> None:
-        self._cache_dict: LRUCache[str, "Bucket"] = LRUCache(10000)
+        self._cache_dict: LRUCache = LRUCache(10000)
 
     @staticmethod
     def _gen_bucket(rule: Rule) -> "Bucket":
@@ -35,7 +35,7 @@ class TokenBucket(BaseLimitBackend):
     def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         bucket: "Bucket" = self._cache_dict.get(key, self._gen_bucket(rule))
         now_timestamp: float = time.time()
-        if bucket.block_timestamp - now_timestamp > 0:
+        if bucket.block_time and bucket.block_timestamp - now_timestamp > 0:
             return False
 
         can_request: bool = False
@@ -43,7 +43,7 @@ class TokenBucket(BaseLimitBackend):
         if token_num <= bucket.token_num:
             bucket.token_num -= token_num
             can_request = True
-        else:
+        elif bucket.block_time:
             bucket.block_timestamp = now_timestamp + bucket.block_time
         self._cache_dict.set(key, bucket)
         return can_request

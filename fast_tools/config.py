@@ -1,10 +1,10 @@
 import logging
-import sys
 import os
+import sys
 import typing
 from collections.abc import MutableMapping
 from configparser import ConfigParser
-from typing import Any, Dict, NoReturn, Optional, Tuple, Type, ForwardRef
+from typing import Any, Dict, ForwardRef, NoReturn, Optional, Tuple, Type, Union
 
 import yaml
 from environs import Env
@@ -85,13 +85,20 @@ class Config:
                 raise KeyError(f"key: {class_name}.{key} must like {class_name}.{key.upper()}")
             if key not in self._config_dict:
                 self._config_dict[key] = getattr(self, key, ...)
-            annotation: Union[str, Typr] = self.__annotations__[key]
+            annotation: Union[str, Type] = self.__annotations__[key]
             if isinstance(annotation, str):
                 value: ForwardRef = ForwardRef(annotation, is_argument=False)
                 annotation = value._evaluate(sys.modules[self.__module__].__dict__, None)  # type: ignore
             annotation_dict[key] = (annotation, ...)
 
-        dynamic_model: Type[BaseModel] = create_model("DynamicModel", **annotation_dict)
+        dynamic_model: Type[BaseModel] = create_model(
+            "DynamicModel",
+            __config__=None,
+            __base__=None,
+            __module__="pydantic.main",
+            __validators__=None,
+            **annotation_dict,
+        )
         self.__dict__.update(dynamic_model(**self._config_dict).dict())
 
     def _read_file(self, file_name: str) -> None:

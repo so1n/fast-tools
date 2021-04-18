@@ -26,6 +26,7 @@ fastapi = "^0.61.2"
 mypy = "^0.790"
 uvicorn = "^0.13.4"
 httpx = "^0.17.1"
+isort = "^5.8.0"
 
 [tool.poetry.extras]
 statsd = ["aio-statsd"]

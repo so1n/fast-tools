@@ -25,13 +25,11 @@ class RouteTrie:
         self.route_dict: Dict["RouteTrie", List[Route]] = {}
 
     def insert_by_app(self, app: ASGIApp) -> None:
-        new_app = app
         while True:
-            if hasattr(new_app, "app"):
-                new_app = new_app.app
-            else:
+            app = getattr(app, "app", None)
+            if not app:
                 break
-        for route in new_app.routes:
+        for route in app.routes:
             url: str = route.path
             self.insert(url, route)
 
@@ -77,3 +75,4 @@ class RouteTrie:
         cur_node: "RouteNode" = self._search_node(url_path)
         if cur_node.route_list:
             return cur_node.route_list
+        return None

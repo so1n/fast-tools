@@ -1,6 +1,6 @@
 import time
 from abc import ABC
-from typing import Awaitable, Callable, List, Optional
+from typing import Any, Awaitable, Callable, Coroutine, List, Optional, Union
 
 from fast_tools.base.redis_helper import RedisHelper
 from fast_tools.limit.backend.base import BaseLimitBackend
@@ -11,9 +11,9 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
     def __init__(self, backend: "RedisHelper"):
         self._backend: "RedisHelper" = backend
 
-    async def _block_time_handle(self, key: str, rule: Rule, func: Callable[..., Awaitable[bool]]):
+    async def _block_time_handle(self, key: str, rule: Rule, func: Callable[..., Awaitable[bool]]) -> bool:
         block_time_key: str = f"{key}:block_time"
-        bucket_block_time: int = rule.block_time
+        bucket_block_time: Optional[int] = rule.block_time
 
         if bucket_block_time is not None and await self._backend.exists(block_time_key):
             return False
@@ -26,7 +26,7 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
 
 
 class RedisFixedWindowBackend(BaseRedisBackend):
-    async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+    def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> Union[bool, Coroutine[Any, Any, bool]]:
         async def _can_requests() -> bool:
             """
             In the current time(rule.get_second()) window,
@@ -39,23 +39,24 @@ class RedisFixedWindowBackend(BaseRedisBackend):
             can_requests: bool = not (access_num > rule.gen_token_num)
             return can_requests
 
-        return await self._block_time_handle(key, rule, _can_requests)
+        return self._block_time_handle(key, rule, _can_requests)
 
-    async def expected_time(self, key: str, rule: Rule) -> float:
-        block_time_key: str = key + ":block_time"
-        block_time = await self._backend.client.get(block_time_key)
-        if block_time:
-            return await self._backend.client.ttl(block_time_key)
+    def expected_time(self, key: str, rule: Rule) -> Union[float, Coroutine[Any, Any, float]]:
+        async def _expected_time() -> float:
+            block_time_key: str = key + ":block_time"
+            block_time = await self._backend.client.get(block_time_key)
+            if block_time:
+                return await self._backend.client.ttl(block_time_key)
 
-        token_num: Optional[str] = await self._backend.client.get(key)
-        if token_num is None:
-            return 0
-        else:
-            token_num: int = int(token_num)
+            token_num_str: Optional[str] = await self._backend.client.get(key)
+            if token_num_str is None:
+                return 0
+            else:
+                if int(token_num_str) < rule.gen_token_num:
+                    return 0
+            return await self._backend.client.ttl(key)
 
-        if token_num < rule.gen_token_num:
-            return 0
-        return await self._backend.client.ttl(key)
+        return _expected_time()
 
 
 class RedisCellBackend(BaseRedisBackend):

@@ -14,6 +14,7 @@ class LazyProperty:
 
     def __call__(self, func: Callable) -> Callable:
         if not asyncio.iscoroutinefunction(func):
+
             def wrapper(*args: Any, **kwargs: Any) -> Any:
                 class_: Any = args[0] if self._is_class_func else self._class
                 future: Optional[futures.Future] = getattr(
@@ -26,8 +27,10 @@ class LazyProperty:
                     setattr(class_, f"{self.__class__.__name__}_{func.__name__}_future", future)
                     return result
                 return future.result()
+
             return wrapper
         else:
+
             async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 class_: Type = args[0] if self._is_class_func else self._class
                 future: Optional[asyncio.Future] = getattr(
@@ -40,6 +43,7 @@ class LazyProperty:
                     setattr(class_, f"{self.__class__.__name__}_{func.__name__}_future", future)
                     return result
                 return future.result()
+
             return async_wrapper
 
 

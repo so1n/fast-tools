@@ -10,9 +10,7 @@ from starlette.types import ASGIApp
 from .route_trie import RouteTrie  # type: ignore
 from .utils import NAMESPACE  # type: ignore
 
-_SEARCH_ROUTE_MIDDLEWARE_CONTEXT: ContextVar[Optional[str]] = ContextVar(
-    f"{NAMESPACE}:search_route_middleware", default=None
-)
+_SEARCH_ROUTE_MIDDLEWARE_CONTEXT: ContextVar[str] = ContextVar(f"{NAMESPACE}:search_route_middleware", default="")
 
 
 class BaseSearchRouteMiddleware(BaseHTTPMiddleware, ABC):
@@ -26,7 +24,7 @@ class BaseSearchRouteMiddleware(BaseHTTPMiddleware, ABC):
         self._route_trie: Optional[RouteTrie] = route_trie
 
     def search_route_url(self, request: Request) -> str:
-        url_path: Optional[str] = _SEARCH_ROUTE_MIDDLEWARE_CONTEXT.get()
+        url_path: str = _SEARCH_ROUTE_MIDDLEWARE_CONTEXT.get()
         if url_path:
             return url_path
         else:

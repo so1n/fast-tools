@@ -46,9 +46,9 @@ def limit(
             # search key, group
             if limit_func is not None and request is not None:
                 if asyncio.iscoroutinefunction(limit_func):
-                    key, group = await limit_func(request)
+                    key, group = await limit_func(request)  # type: ignore
                 else:
-                    key, group = limit_func(request)
+                    key, group = limit_func(request)  # type: ignore
 
             # match url rule
             for rule in rule_list:
@@ -61,7 +61,7 @@ def limit(
                     return Response(content=content, status_code=status_code)
             can_requests: Union[bool, Awaitable[bool]] = backend.can_requests(key, rule)
             if asyncio.iscoroutine(can_requests):
-                can_requests = await can_requests
+                can_requests = await can_requests  # type: ignore
             if can_requests:
                 return await func(*args, **kwargs)
             else:

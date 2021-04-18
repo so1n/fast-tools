@@ -19,7 +19,7 @@ async def startup_event() -> None:
 
 
 @app.get("/")
-async def root() -> None:
+async def root() -> dict:
     return {"Hello": "World"}
 
 

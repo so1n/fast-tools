@@ -14,6 +14,7 @@ example run output:
 ]
 """
 from __future__ import annotations
+
 from typing import List, Optional
 
 from pydantic.fields import Json
@@ -33,8 +34,8 @@ class MyConfig(Config):
     MYSQL_DB_NAME: str
     MYSQL_DB_PASS: str
     MYSQL_DB_USER: str
-    ES_HOST: Json[List]
-    TEST_LIST_INT: Json[List]
+    ES_HOST: Json[List]  # type: ignore
+    TEST_LIST_INT: Json[List]  # type: ignore
     YML_ES_HOST: Optional[List[str]] = None
     YML_TEST_LIST_INT: Optional[List[int]] = None
 

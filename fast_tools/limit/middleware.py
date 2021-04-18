@@ -41,9 +41,9 @@ class LimitMiddleware(BaseHTTPMiddleware):
         self._status_code: int = status_code
         self._enable_match_fail_pass: bool = enable_match_fail_pass
 
-        self._rule_list: List[Tuple[re.Pattern[str], List[Rule]]] = [
-            (re.compile(key), value) for key, value in rule_list
-        ]
+        self._rule_list: List[Tuple[re.Pattern[str], List[Rule]]] = (
+            [(re.compile(key), value) for key, value in rule_list] if rule_list else []
+        )
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         url_path: str = request.url.path
@@ -60,9 +60,9 @@ class LimitMiddleware(BaseHTTPMiddleware):
         group: Optional[str] = None
         if self._func is not None:
             if asyncio.iscoroutinefunction(self._func):
-                key, group = await self._func(request)
+                key, group = await self._func(request)  # type: ignore
             else:
-                key, group = self._func(request)
+                key, group = self._func(request)  # type: ignore
 
         for rule in rule_list:
             if rule.group == group:
@@ -75,7 +75,7 @@ class LimitMiddleware(BaseHTTPMiddleware):
 
         can_requests: Union[bool, Awaitable[bool]] = self._backend.can_requests(key, rule)
         if asyncio.iscoroutine(can_requests):
-            can_requests = await can_requests
+            can_requests = await can_requests  # type: ignore
         if can_requests:
             return await call_next(request)
         else:

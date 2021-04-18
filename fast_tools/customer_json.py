@@ -10,7 +10,7 @@ except ImportError:
     try:
         import ujson as json  # type: ignore
     except ImportError:
-        import json
+        import json  # type: ignore
 
 
 @singledispatch

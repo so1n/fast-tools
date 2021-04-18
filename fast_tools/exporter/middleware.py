@@ -21,7 +21,7 @@ class PrometheusMiddleware(BaseSearchRouteMiddleware):
     ) -> None:
         super().__init__(app, route_trie=route_trie)
         self._app_name: str = app_name
-        self._block_url_set = block_url_set
+        self._block_url_set = block_url_set or set()
 
         self.request_count: "Counter" = Counter(
             f"{prefix}_requests_total", "Count of requests", ["app_name", "method", "url_path"]

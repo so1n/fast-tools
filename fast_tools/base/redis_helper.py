@@ -53,7 +53,7 @@ class Lock(object):
         await self.acquire(blocking_timeout=blocking_timeout)
         return self
 
-    async def __aexit__(self, exc_type, exc_value, traceback) -> None:
+    async def __aexit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
         await self.release()
 
     async def locked(self) -> bool:
@@ -107,7 +107,13 @@ class RedisHelper(object):
     ):
         self._namespace: str = namespace
         self._conn_pool: Optional["ConnectionsPool"] = None
-        self.client: Optional["Redis"] = None
+        self._client: Optional["Redis"] = None
+
+    @property
+    def client(self) -> Redis:
+        if self.client is None:
+            raise ConnectionError(f"Not init {self.__class__.__name__}, please run {self.__class__.__name__}.init")
+        return self._client
 
     def init(self, conn_pool: "ConnectionsPool", namespace: Optional[str] = None) -> None:
         if conn_pool is None:
@@ -116,12 +122,14 @@ class RedisHelper(object):
             logging.error(f"Init error, {self.__class__.__name__} already init")
         else:
             self._conn_pool = conn_pool
-            self.client = Redis(self._conn_pool)
+            self._client = Redis(self._conn_pool)
             if namespace:
                 self._namespace = namespace
 
-    async def execute(self, command: str, *args: Any, **kwargs: Any) -> Optional[Any]:
+    async def execute(self, command: str, *args: Any, **kwargs: Any) -> Any:
         try:
+            if self._conn_pool is None:
+                raise ConnectionError(f"Not init {self.__class__.__name__}, please run {self.__class__.__name__}.init")
             async with self._conn_pool.get() as conn:
                 return await conn.execute(command, *args, **kwargs)
         except Exception as e:
@@ -202,7 +210,10 @@ class RedisHelper(object):
         return return_dict
 
     def closed(self) -> None:
-        return self._conn_pool.closed
+        if self._conn_pool is None:
+            logging.warning("redis helper already close")
+        else:
+            return self._conn_pool.closed
 
     async def close(self) -> None:
         if self._conn_pool is not None and not self._conn_pool.closed:

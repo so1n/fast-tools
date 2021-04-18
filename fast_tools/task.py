@@ -16,7 +16,6 @@ future_dict: Dict[str, asyncio.Future] = {}
 
 
 class Task(object):
-
     def __init__(
         self,
         func: Union[AsyncFuncT, FuncT],

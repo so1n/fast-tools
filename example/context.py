@@ -56,7 +56,7 @@ async def root() -> dict:
 
     loop.call_soon(test_call_soon)
     ctx: Context = copy_context()
-    await loop.run_in_executor(None, partial(ctx.run, test_run_in_executor))
+    await loop.run_in_executor(None, partial(ctx.run, test_run_in_executor))  # type: ignore
     return {
         "message": context_model.to_dict(is_safe_return=True),  # not return CustomQuery
         "local_ip": (await context_model.http_client.get("http://icanhazip.com")).text,
