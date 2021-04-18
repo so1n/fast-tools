@@ -11,7 +11,7 @@ from fast_tools.base import NAMESPACE, RedisHelper
 
 def _check_typing_type(_type: Type, origin_name: str) -> bool:
     try:
-        return _type.__origin__ == origin_name
+        return _type.__origin__ == origin_name  # type: ignore
     except AttributeError:
         return False
 

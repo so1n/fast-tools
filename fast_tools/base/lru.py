@@ -25,9 +25,8 @@ class LRUCache:
 
     def set(self, key: Any, value: Any) -> Any:
         with self._lock:
-            try:
+            if len(self.cache) >= self.capacity:
+                self.cache.popitem(last=False)
+            if key in self.cache:
                 self.cache.pop(key)
-            except KeyError:
-                if len(self.cache) >= self.capacity:
-                    self.cache.popitem(last=False)
             self.cache[key] = value

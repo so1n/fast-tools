@@ -33,11 +33,18 @@ def limit(
         @wraps(func)
         async def _limit(*args: Any, **kwargs: Any) -> Any:
             # get request param
-            request: Optional[Request] = None
             for arg in args:
                 if isinstance(arg, Request):
-                    request = arg
+                    request: Request = arg
                     break
+            else:
+                raise ValueError("Can not found request param")
+
+            async def _can_request_handle(_can_request: bool) -> Response:
+                if _can_request:
+                    return await func(*args, **kwargs)
+                else:
+                    return Response(content=content, status_code=status_code)
 
             # set default key, group
             key: str = str(id(func))
@@ -55,17 +62,13 @@ def limit(
                 if rule.group == group:
                     break
             else:
-                if enable_match_fail_pass:
-                    return await func(*args, **kwargs)
-                else:
-                    return Response(content=content, status_code=status_code)
+                return await _can_request_handle(enable_match_fail_pass)
+
             can_requests: Union[bool, Awaitable[bool]] = backend.can_requests(key, rule)
             if asyncio.iscoroutine(can_requests):
                 can_requests = await can_requests  # type: ignore
-            if can_requests:
-                return await func(*args, **kwargs)
-            else:
-                return Response(content=content, status_code=status_code)
+
+            return await _can_request_handle(can_requests)  # type: ignore
 
         return _limit
 

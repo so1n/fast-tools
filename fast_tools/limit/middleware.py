@@ -1,6 +1,6 @@
 import asyncio
 import re
-from typing import Awaitable, Dict, List, Optional, Tuple, Union
+from typing import Awaitable, List, Optional, Tuple, Union
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -46,15 +46,18 @@ class LimitMiddleware(BaseHTTPMiddleware):
         )
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        async def _can_request_handle(_can_request: bool) -> Response:
+            if _can_request:
+                return await call_next(request)
+            else:
+                return Response(content=self._content, status_code=self._status_code)
+
         url_path: str = request.url.path
         for pattern, rule_list in self._rule_list:
             if pattern.match(url_path):
                 break
         else:
-            if self._enable_match_fail_pass:
-                return await call_next(request)
-            else:
-                return Response(content=self._content, status_code=self._status_code)
+            return await _can_request_handle(self._enable_match_fail_pass)
 
         key: str = str(pattern)
         group: Optional[str] = None
@@ -68,15 +71,10 @@ class LimitMiddleware(BaseHTTPMiddleware):
             if rule.group == group:
                 break
         else:
-            if self._enable_match_fail_pass:
-                return await call_next(request)
-            else:
-                return Response(content=self._content, status_code=self._status_code)
+            return await _can_request_handle(self._enable_match_fail_pass)
 
         can_requests: Union[bool, Awaitable[bool]] = self._backend.can_requests(key, rule)
         if asyncio.iscoroutine(can_requests):
             can_requests = await can_requests  # type: ignore
-        if can_requests:
-            return await call_next(request)
-        else:
-            return Response(content=self._content, status_code=self._status_code)
+
+        return await _can_request_handle(can_requests)  # type: ignore

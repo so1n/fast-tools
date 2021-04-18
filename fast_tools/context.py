@@ -23,8 +23,7 @@ class BaseContextHelper(object):
 
     def __init__(self, key: str):
         self._key: str = key
-        cls: "Type[BaseContextHelper]" = self.__class__
-        key = f"{cls.__name__}:{key}"
+        key = f"{self.__class__.__name__}:{key}"
         if key in _CONTEXT_KEY_SET:
             # key must be globally unique
             raise RuntimeError(f"key:{key} already exists")
@@ -96,7 +95,7 @@ class ContextBaseModel(object):
     @classmethod
     def to_dict(cls, is_safe_return: bool = False) -> Dict[str, Any]:
         _dict: _CONTEXT_DICT_TYPE = {}
-        for key, value in get_type_hints(cls).items():
+        for key, annotation in get_type_hints(cls).items():
             value = getattr(cls, key)
             if is_safe_return and type(value) not in _CAN_JSON_TYPE_SET:
                 continue

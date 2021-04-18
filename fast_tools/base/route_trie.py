@@ -36,7 +36,6 @@ class RouteTrie:
     def insert(self, url_path: str, route: Route) -> None:
         cur_node: "RouteNode" = self.root_node
         for node_url in url_path.strip().split("/"):
-            node_url = node_url + "/"
             if "{" == node_url[0] and "}" == node_url[-2]:
                 break
             elif node_url not in cur_node.node:
@@ -47,7 +46,6 @@ class RouteTrie:
     def _search_node(self, url_path: str) -> RouteNode:
         cur_node = self.root_node
         for url_node in url_path.strip().split("/"):
-            url_node = url_node + "/"
             if url_node in cur_node.node:
                 cur_node = cur_node.node[url_node]
             else:

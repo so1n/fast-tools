@@ -4,10 +4,9 @@ import sys
 import typing
 from collections.abc import MutableMapping
 from configparser import ConfigParser
-from typing import Any, Dict, ForwardRef, NoReturn, Optional, Tuple, Type, Union
+from typing import Any, Dict, ForwardRef, Optional, Tuple, Type, Union
 
 import yaml
-from environs import Env
 from pydantic import BaseModel, create_model
 
 __all__ = ["Config"]
@@ -23,28 +22,20 @@ class Environ(MutableMapping):
     """
 
     def __init__(self, _environ: typing.MutableMapping = os.environ):
-        try:
-            from environs import Env
-
-            Env().read_env()
-        except ImportError:
-            logging.warn("read .env fail, please run `pip install environs`")
-            pass
-
         self._environ = _environ
-        self._has_been_read = set()  # type: typing.Set[typing.Any]
+        self._has_been_read_set = set()  # type: typing.Set[typing.Any]
 
     def __getitem__(self, key: typing.Any) -> typing.Any:
-        self._has_been_read.add(key)
+        self._has_been_read_set.add(key)
         return self._environ.__getitem__(key)
 
     def __setitem__(self, key: typing.Any, value: typing.Any) -> None:
-        if key in self._has_been_read:
+        if key in self._has_been_read_set:
             raise EnvironError(f"Attempting to set environ['{key}'], but the value has already been read.")
         self._environ.__setitem__(key, value)
 
     def __delitem__(self, key: typing.Any) -> None:
-        if key in self._has_been_read:
+        if key in self._has_been_read_set:
             raise EnvironError(f"Attempting to delete environ['{key}'], but the value has already been read.")
         self._environ.__delitem__(key)
 
@@ -60,8 +51,21 @@ environ = Environ()
 
 class Config:
     def __init__(
-        self, config_file: Optional[str] = None, group: Optional[str] = None, global_key: str = "global"
+        self,
+        config_file: Optional[str] = None,
+        group: Optional[str] = None,
+        global_key: str = "global",
+        loan_env_file: bool = False,
     ) -> None:
+        if loan_env_file:
+            try:
+                from environs import Env
+
+                Env().read_env()
+            except ImportError as e:
+                logging.warn("read .env fail, please run `pip install environs`")
+                raise e
+
         self._config_dict: Dict[str, Any] = {}
         if group:
             self._group = group

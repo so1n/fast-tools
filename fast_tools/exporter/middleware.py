@@ -58,9 +58,9 @@ class PrometheusMiddleware(BaseSearchRouteMiddleware):
         self.request_in_progress.labels(*label_list).inc()
         self.request_count.labels(*label_list).inc()
 
-        status_code = 500
-        start_time = time.time()
-        request_result = 0
+        status_code: int = 500
+        start_time: float = time.time()
+        request_result: int = 0
         try:
             response = await call_next(request)
             status_code = response.status_code
