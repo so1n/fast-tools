@@ -15,12 +15,65 @@ AsyncFuncT = Callable[[], Coroutine[Any, Any, None]]
 future_dict: Dict[str, asyncio.Future] = {}
 
 
+class Task(object):
+
+    def __init__(
+        self,
+        func: Union[AsyncFuncT, FuncT],
+        seconds: Optional[float] = None,
+        key: Optional[str] = None,
+        logger: Optional[logging.Logger] = None,
+        max_retry: Optional[int] = None,
+    ) -> None:
+        self.func: Union[AsyncFuncT, FuncT] = func
+        self.seconds: Optional[float] = seconds
+        self.key: str = key or func.__name__
+        self.logger: Optional[logging.Logger] = logger
+        self.max_retry: Optional[int] = max_retry
+
+    async def real_run_job(self) -> None:
+        retry_cnt = 0
+        while self.max_retry is None or retry_cnt < self.max_retry:
+            try:
+                if asyncio.iscoroutinefunction(self.func):
+                    await func()  # type: ignore
+                else:
+                    await run_in_threadpool(self.func)
+                break
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                format_e = "".join(format_exception(type(e), e, e.__traceback__))
+                if self.logger is not None:
+                    self.logger.error(format_e)
+                else:
+                    logging.error(format_e)
+                retry_cnt += 1
+            await asyncio.sleep(retry_cnt * retry_cnt)
+
+    async def task_loop(self) -> None:
+        while True:
+            future: Optional[asyncio.Future] = future_dict.get(self.key, None)
+            if future is not None:
+                if future.cancelled():
+                    future.cancel()
+                elif not future.done():
+                    await asyncio.sleep(1)
+                    continue
+
+            future = asyncio.ensure_future(self.real_run_job())
+            future_dict[self.key] = future
+            if self.seconds:
+                await asyncio.sleep(self.seconds)
+            else:
+                break
+
+
 def background_task(
     *,
     seconds: Optional[float] = None,
     key: Optional[str] = None,
     logger: Optional[logging.Logger] = None,
-    enable_raise: bool = False,
     max_retry: Optional[int] = None,
 ) -> Callable[[Union[FuncT, AsyncFuncT]], AsyncFuncT]:
     """
@@ -28,63 +81,14 @@ def background_task(
      otherwise the task will be executed only once
     key: task key, if key is empty, key is func name
     logger: python logging logger
-    enable_raise: if enable_raise is not empty, it will report an error directly instead of retrying
     max_retry: If max_retry is not empty, the number of task cycles will be limited
     """
 
     def decorator(func: Union[AsyncFuncT, FuncT]) -> AsyncFuncT:
         @wraps(func)
         async def wrapped() -> None:
-            nonlocal key
-            if key is None:
-                key = func.__name__
-
-            async def job() -> None:
-                retry_cnt = 0
-                while max_retry is None or retry_cnt < max_retry:
-                    try:
-                        if asyncio.iscoroutinefunction(func):
-                            await func()
-                        else:
-                            await run_in_threadpool(func)
-                        break
-                    except Exception as e:
-                        if enable_raise:
-                            raise e
-                        else:
-                            retry_cnt += 1
-                            future: asyncio.Future = future_dict.get(key, None)
-                            if future:
-                                future.set_exception(e)
-                    await asyncio.sleep(retry_cnt * retry_cnt)
-
-                future = future_dict.get(key, None)
-                if future and future.done():
-                    result = future.result()
-                    if isinstance(result, Exception):
-                        format_e = "".join(format_exception(type(result), result, result.__traceback__))
-                        if logger is not None:
-                            logger.error(format_e)
-                        else:
-                            logging.error(format_e)
-
-            async def task_loop() -> None:
-                while True:
-                    future: asyncio.Future = future_dict.get(key, None)
-                    if future is not None:
-                        if future.cancelled():
-                            future.cancel()
-                            break
-                        elif not future.done():
-                            await asyncio.sleep(1)
-                    future = asyncio.ensure_future(job())
-                    future_dict[key] = future
-                    if seconds:
-                        await asyncio.sleep(seconds)
-                    else:
-                        break
-
-            asyncio.ensure_future(task_loop())
+            task: Task = Task(func, seconds, key, logger, max_retry)
+            asyncio.ensure_future(task.task_loop())
 
         return wrapped
 
