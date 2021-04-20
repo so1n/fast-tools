@@ -22,13 +22,13 @@ class Lock(object):
     # ARGV[1] - token
     # return 1 if the lock was released, otherwise 0
     LUA_RELEASE_SCRIPT = """
-                    local token = redis.call('get', KEYS[1])
-                    if not token or token ~= ARGV[1] then
-                        return 0
-                    end
-                    redis.call('del', KEYS[1])
-                    return 1
-                """
+        local token = redis.call('get', KEYS[1])
+        if not token or token ~= ARGV[1] then
+            return 0
+        end
+        redis.call('del', KEYS[1])
+        return 1
+    """
 
     def __init__(
         self,
@@ -79,7 +79,7 @@ class Lock(object):
     async def do_acquire(self, token: str) -> bool:
         timeout: Optional[int] = int(self._timeout) if self._timeout else None
 
-        if await self._redis.execute("SET", self._lock_key, token, "ex", timeout, "nx") == "ok":
+        if await self._redis.execute("SET", self._lock_key, token, "ex", timeout, "nx") == "OK":
             return True
         return False
 
@@ -111,7 +111,7 @@ class RedisHelper(object):
 
     @property
     def client(self) -> Redis:
-        if self.client is None:
+        if self._client is None:
             raise ConnectionError(f"Not init {self.__class__.__name__}, please run {self.__class__.__name__}.init")
         return self._client
 

@@ -4,9 +4,11 @@ import logging
 from functools import wraps
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
 
+from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from fast_tools.base import NAMESPACE, RedisHelper
+from fast_tools.base import NAMESPACE
+from fast_tools.base import redis_helper
 
 
 def _check_typing_type(_type: Type, origin_name: str) -> bool:
@@ -16,18 +18,20 @@ def _check_typing_type(_type: Type, origin_name: str) -> bool:
         return False
 
 
-async def cache_control(response: Response, backend: "RedisHelper", key: str) -> None:
+async def cache_control(response: Response, backend: "redis_helper.RedisHelper", key: str) -> None:
     """add ttl in response header"""
     ttl = await backend.client.ttl(key)
     response.headers["Cache-Control"] = f"max-age={ttl}"
 
 
 def cache(
-    backend: "RedisHelper",
+    backend: "redis_helper.RedisHelper",
     expire: Optional[int] = None,
     namespace: str = NAMESPACE,
+    alias: Optional[str] = None,
     json_response: Type[JSONResponse] = JSONResponse,
-    after_cache_response_list: Optional[List[Callable[[Response, "RedisHelper", str], Awaitable]]] = None,
+    get_key_func: Optional[Callable[[Request], Awaitable[str]]] = None,
+    after_cache_response_list: Optional[List[Callable[[Response, "redis_helper.RedisHelper", str], Awaitable]]] = None,
 ) -> Callable:
     """
     backend: now only support `RedisHelper`
@@ -36,56 +40,61 @@ def cache(
     json_response: response like `JSONResponse` or `UJSONResponse`
     after_cache_response:list: cache response data handle
     """
-
     def wrapper(func: Callable) -> Callable:
+        prefix: str = f"{namespace}:{alias or func.__name__}"
+
+        async def _get_key(args: Any, kwargs: Any) -> str:
+            if get_key_func:
+                for arg in kwargs.values():
+                    if isinstance(arg, Request):
+                        request: Request = arg
+                        break
+                else:
+                    raise ValueError("Can not found request param")
+                key: str = f"{prefix}:{await get_key_func(request)}"
+            else:
+                key = f"{prefix}:{args}:{kwargs}"
+            return key
+
+        async def _cache_response_handle(response: Response, key: str) -> Response:
+            if after_cache_response_list:
+                for after_cache_response in after_cache_response_list:
+                    await after_cache_response(response, backend, key)
+            return response
+
         @wraps(func)
         async def return_dict_handle(*args: Any, **kwargs: Any) -> Response:
-            key: str = f"{namespace}:{func.__name__}:{args}:{kwargs}"
-
-            async def _cache_response_handle(_ret: Dict[str, Any]) -> Response:
-                response: Response = json_response(_ret)
-                if after_cache_response_list:
-                    for after_cache_response in after_cache_response_list:
-                        await after_cache_response(response, backend, key)
-                return response
+            key: str = await _get_key(args, kwargs)
 
             # get cache response data
             ret: Dict[str, Any] = await backend.get_dict(key)
             if ret:
-                return await _cache_response_handle(ret)
-            else:
-                lock = backend.lock(key + ":lock")
-                async with lock:
-                    # get lock
-                    ret = await backend.get_dict(key)
-                    # check cache response data
-                    if ret:
-                        return await _cache_response_handle(ret)
-                    else:
-                        ret = await func(*args, **kwargs)
-                        await backend.set_dict(key, ret, expire)
-                        return json_response(ret)
+                return await _cache_response_handle(json_response(ret), key)
+
+            lock: redis_helper.Lock = backend.lock(key + ":lock")
+            async with lock:
+                # get lock
+                ret = await backend.get_dict(key)
+                # check cache response data
+                if ret:
+                    return await _cache_response_handle(json_response(ret), key)
+                else:
+                    ret = await func(*args, **kwargs)
+                    await backend.set_dict(key, ret, expire)
+            return json_response(ret)
 
         @wraps(func)
         async def return_response_handle(*args: Any, **kwargs: Any) -> Callable:
-            key: str = f"{namespace}:{func.__name__}:{args}:{kwargs}"
-
-            async def _cache_response_handle(_ret: Dict[str, Any]) -> Response:
-                response: Response = return_annotation(**_ret)
-                if after_cache_response_list:
-                    for after_cache_response in after_cache_response_list:
-                        await after_cache_response(response, backend, key)
-                return response
-
+            key: str = await _get_key(args, kwargs)
             ret: Dict[str, Any] = await backend.get_dict(key)
             if ret:
-                return await _cache_response_handle(ret)
+                return await _cache_response_handle(return_annotation(**ret), key)
 
-            lock = backend.lock(key + ":lock")
+            lock: redis_helper.Lock = backend.lock(key + ":lock")
             async with lock:
                 ret = await backend.get_dict(key)
                 if ret:
-                    return await _cache_response_handle(ret)
+                    return await _cache_response_handle(return_annotation(**ret), key)
                 else:
                     resp: Response = await func(*args, **kwargs)
                     headers: dict = dict(resp.headers)
@@ -106,7 +115,7 @@ def cache(
                         },
                         expire,
                     )
-                    return resp
+            return resp
 
         @wraps(func)
         async def return_normal_handle(*args: Any, **kwargs: Any) -> Any:
