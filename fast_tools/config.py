@@ -67,6 +67,7 @@ class Config:
                 raise e
 
         self._config_dict: Dict[str, Any] = {}
+        self._model: Optional[BaseModel] = None
         if group:
             self._group = group
         elif "group" in environ:
@@ -103,7 +104,14 @@ class Config:
             __validators__=None,
             **annotation_dict,
         )
-        self.__dict__.update(dynamic_model(**self._config_dict).dict())
+        self._model = dynamic_model(**self._config_dict)
+        self.__dict__.update(self._model.dict())
+
+    @property
+    def model(self) -> BaseModel:
+        if not self._model:
+            raise ValueError("Can not found model")
+        return self._model
 
     def _read_file(self, file_name: str) -> None:
         if file_name.endswith(".yml"):
