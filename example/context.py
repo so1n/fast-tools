@@ -7,6 +7,7 @@
 __author__ = "so1n"
 __date__ = "2020-06"
 import asyncio
+import logging
 import uuid
 from contextvars import Context, copy_context
 from functools import partial
@@ -38,15 +39,15 @@ app.add_middleware(ContextMiddleware, context_model=context_model)
 
 
 async def test_ensure_future() -> None:
-    print(f"test_ensure_future {context_model.http_client}")
+    logging.debug(f"test_ensure_future {id(context_model.http_client)}")
 
 
 def test_run_in_executor() -> None:
-    print(f"test_run_in_executor {context_model.http_client}")
+    logging.info(f"test_run_in_executor {id(context_model.http_client)}")
 
 
 def test_call_soon() -> None:
-    print(f"test_call_soon {context_model.http_client}")
+    logging.warning(f"test_call_soon {id(context_model.http_client)}")
 
 
 @app.get("/")
@@ -59,7 +60,7 @@ async def root() -> dict:
     await loop.run_in_executor(None, partial(ctx.run, test_run_in_executor))  # type: ignore
     return {
         "message": context_model.to_dict(is_safe_return=True),  # not return CustomQuery
-        "local_ip": (await context_model.http_client.get("http://icanhazip.com")).text,
+        "client_id": id(context_model.http_client)
     }
 
 
