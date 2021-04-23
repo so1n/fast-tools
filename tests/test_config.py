@@ -1,9 +1,3 @@
-import asyncio
-import aioredis  # type: ignore
-import pytest
-from requests import Response
-from starlette.testclient import TestClient
-
 from example.config import MyConfig
 from .conftest import AnyStringWith  # type: ignore
 
