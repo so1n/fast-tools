@@ -44,38 +44,38 @@ class TestLimit:
             time.sleep(0.5)
             response = client.get(url)
             assert response.json() == {"Hello": "World"}
-    #
-    # def test_redis_fixed_window(self) -> None:
-    #     self._test_backend_helper("/")
-    #
-    # def test_redis_token_bucket(self) -> None:
-    #     self._test_backend_helper("/redis/token_bucket")
-    #
-    # def test_redis_cell(self) -> None:
-    #     self._test_backend_helper("/redis/cell")
-    #
-    # def test_memory_token_bucket(self) -> None:
-    #     self._test_backend_helper("/memory/token_bucket")
-    #
-    # def test_memory_thread_token_bucket(self) -> None:
-    #     self._test_backend_helper("/memory/thread_token_bucket")
 
-    # def test_decorator(self) -> None:
-    #     with TestClient(app) as client:
-    #         for _ in range(10):
-    #             response: Response = client.get("/decorator")
-    #             assert response.json() == {"Hello": "World"}
-    #
-    #         response = client.get("/decorator?user=user1")
-    #         assert response.json() == {"Hello": "World"}
-    #         response = client.get("/decorator?user=user1")
-    #         assert response.status_code == 429
-    #
-    #         for _ in range(2):
-    #             response = client.get("/decorator?user=user2")
-    #             assert response.json() == {"Hello": "World"}
-    #         response = client.get("/decorator?user=user2")
-    #         assert response.status_code == 429
+    def test_redis_fixed_window(self) -> None:
+        self._test_backend_helper("/")
+
+    def test_redis_token_bucket(self) -> None:
+        self._test_backend_helper("/redis/token_bucket")
+
+    def test_redis_cell(self) -> None:
+        self._test_backend_helper("/redis/cell")
+
+    def test_memory_token_bucket(self) -> None:
+        self._test_backend_helper("/memory/token_bucket")
+
+    def test_memory_thread_token_bucket(self) -> None:
+        self._test_backend_helper("/memory/thread_token_bucket")
+
+    def test_decorator(self) -> None:
+        with TestClient(app) as client:
+            for _ in range(10):
+                response: Response = client.get("/decorator")
+                assert response.json() == {"Hello": "World"}
+
+            response = client.get("/decorator?user=user1")
+            assert response.json() == {"Hello": "World"}
+            response = client.get("/decorator?user=user1")
+            assert response.status_code == 429
+
+            for _ in range(2):
+                response = client.get("/decorator?user=user2")
+                assert response.json() == {"Hello": "World"}
+            response = client.get("/decorator?user=user2")
+            assert response.status_code == 429
 
     def test_middleware(self) -> None:
         with TestClient(app) as client:
