@@ -1,6 +1,6 @@
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from fast_tools.base import LRUCache
@@ -15,7 +15,8 @@ class Bucket(object):
     token_num: int
     max_token_num: int
     block_time: Optional[float]
-    block_timestamp: float = 0
+    block_timestamp: float = 0.0
+    last_update_timestamp: float = field(default_factory=time.time)
 
 
 class TokenBucket(BaseLimitBackend):
@@ -43,7 +44,7 @@ class TokenBucket(BaseLimitBackend):
         if token_num <= bucket.token_num:
             bucket.token_num -= token_num
             can_request = True
-        elif bucket.block_time:
+        if not can_request and bucket.block_time:
             bucket.block_timestamp = now_timestamp + bucket.block_time
         self._cache_dict.set(key, bucket)
         return can_request
@@ -67,9 +68,9 @@ class TokenBucket(BaseLimitBackend):
     def _update_tokens(bucket: "Bucket") -> int:
         if bucket.token_num < bucket.max_token_num:
             now: float = time.time()
-            diff_time: float = now - bucket.block_timestamp
+            diff_time: float = now - bucket.last_update_timestamp
             gen_token = int(diff_time * bucket.rate)
-            bucket.block_timestamp = now - (diff_time - int(diff_time))
+            bucket.last_update_timestamp = now - (diff_time - int(diff_time))
             bucket.token_num = min(bucket.max_token_num, bucket.token_num + gen_token)
         return bucket.token_num
 

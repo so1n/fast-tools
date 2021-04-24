@@ -33,9 +33,9 @@ def limit(
         @wraps(func)
         async def _limit(*args: Any, **kwargs: Any) -> Any:
             # get request param
-            for arg in args:
-                if isinstance(arg, Request):
-                    request: Request = arg
+            for param_name, param in kwargs.items():
+                if isinstance(param, Request):
+                    request: Request = param
                     break
             else:
                 raise ValueError("Can not found request param")
@@ -56,7 +56,6 @@ def limit(
                     key, group = await limit_func(request)  # type: ignore
                 else:
                     key, group = limit_func(request)  # type: ignore
-
             # match url rule
             for rule in rule_list:
                 if rule.group == group:
@@ -64,6 +63,7 @@ def limit(
             else:
                 return await _can_request_handle(enable_match_fail_pass)
 
+            key = f"{group}:{key}"
             can_requests: Union[bool, Awaitable[bool]] = backend.can_requests(key, rule)
             if asyncio.iscoroutine(can_requests):
                 can_requests = await can_requests  # type: ignore
