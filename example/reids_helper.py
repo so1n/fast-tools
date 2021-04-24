@@ -7,7 +7,8 @@ from fast_tools.base import RedisHelper
 
 
 async def test_redis_helper() -> None:
-    redis: "RedisHelper" = RedisHelper(
+    redis: "RedisHelper" = RedisHelper()
+    redis.init(
         await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8")
     )
     test_key: str = "test_key"
@@ -25,6 +26,7 @@ async def test_redis_helper() -> None:
     assert isinstance(value, list)
     await redis.set_dict(test_key, test_dict_value, 360)
     assert test_dict_value == await redis.get_dict(test_key)
+    await redis.close()
 
 
 asyncio.run(test_redis_helper())
