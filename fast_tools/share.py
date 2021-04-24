@@ -18,9 +18,15 @@ class Token(object):
             return True
         return False
 
+    def is_done(self) -> bool:
+        return self._future is not None and self._future.done()
+
     def cancel(self) -> bool:
-        if self._future and not self._future.cancelled():
-            self._future.cancel()
+        if self._future is not None and not self._future.done():
+            if self._future.cancelled():
+                self._future.cancel()
+            else:
+                self.set_result(asyncio.CancelledError())
             return True
         return False
 
@@ -53,9 +59,12 @@ class Share(object):
             self._future_dict[key] = token
         return self._future_dict[key]
 
-    def cancel(self) -> None:
-        for key, token in self._future_dict.items():
-            token.cancel()
+    def cancel(self, key: Optional[str] = None) -> None:
+        if not key:
+            for key, token in self._future_dict.items():
+                token.cancel()
+        else:
+            self._future_dict[key].cancel()
 
     async def delay_del_token(self, key: str) -> None:
         await asyncio.sleep(self._delay_clean_time)
@@ -73,7 +82,10 @@ class Share(object):
         token: Token = self.get_token(key)
         if token.can_do():
             try:
-                result = await func(*args, **kwargs)
+                result: Any = await func(*args, **kwargs)
+                # if token is cancel
+                if token.is_done():
+                    return await token.await_done()
                 token.set_result(result)
             except Exception as e:
                 token.set_result(e)
@@ -87,10 +99,7 @@ class Share(object):
 
     def wrapper_do(self, key: Optional[str] = None) -> Callable:
         def wrapper(func: Callable) -> Callable:
-            if key is None:
-                key_name: str = func.__name__ + str(id(func))
-            else:
-                key_name = key
+            key_name: str = func.__name__ + str(id(func)) if key is None else key
 
             @wraps(func)
             async def wrapper_func(*args: Any, **kwargs: Any) -> Any:

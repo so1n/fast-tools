@@ -7,8 +7,8 @@ from fast_tools.share import Share
 
 async def delay_print(duration: int) -> int:
     sleep_time: int = duration
-    if sleep_time > 3:
-        sleep_time = 3
+    if sleep_time > 1:
+        sleep_time = 1
     await asyncio.sleep(sleep_time)
     return duration
 

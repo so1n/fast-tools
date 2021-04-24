@@ -26,9 +26,10 @@ class RouteTrie:
 
     def insert_by_app(self, app: ASGIApp) -> None:
         while True:
-            app = getattr(app, "app", None)
-            if not app:
+            sub_app: ASGIApp = getattr(app, "app", None)
+            if not sub_app:
                 break
+            app = sub_app
         for route in app.routes:
             url: str = route.path
             self.insert(url, route)
@@ -36,7 +37,7 @@ class RouteTrie:
     def insert(self, url_path: str, route: Route) -> None:
         cur_node: "RouteNode" = self.root_node
         for node_url in url_path.strip().split("/"):
-            if "{" == node_url[0] and "}" == node_url[-2]:
+            if node_url and "{" == node_url[0] and "}" == node_url[-2]:
                 break
             elif node_url not in cur_node.node:
                 cur_node.node[node_url] = RouteNode()
