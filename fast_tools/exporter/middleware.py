@@ -14,8 +14,8 @@ class PrometheusMiddleware(BaseSearchRouteMiddleware):
     def __init__(
         self,
         app: ASGIApp,
-        app_name: str = NAMESPACE,
-        prefix: str = NAMESPACE,
+        app_name: str = NAMESPACE.replace("-", "_"),
+        prefix: str = NAMESPACE.replace("-", "_"),
         route_trie: Optional["RouteTrie"] = None,
         block_url_set: Optional[Set[str]] = None,
     ) -> None:
@@ -49,9 +49,9 @@ class PrometheusMiddleware(BaseSearchRouteMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         method: str = request.method
-        url_path: str = self.search_route_url(request)
+        url_path, is_match = self.search_route_url(request)
 
-        if url_path in self._block_url_set:
+        if url_path in self._block_url_set or not is_match:
             return await call_next(request)
 
         label_list: list = [self._app_name, method, url_path]

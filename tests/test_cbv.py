@@ -1,12 +1,9 @@
-import asyncio
 import aioredis  # type: ignore
-import time
 import pytest
 from requests import Response
 from starlette.testclient import TestClient
 
 from example.cbv import app
-from fast_tools.base.redis_helper import RedisHelper
 from .conftest import AnyStringWith  # type: ignore
 
 

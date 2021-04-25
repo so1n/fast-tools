@@ -1,6 +1,6 @@
 from abc import ABC
 from contextvars import ContextVar
-from typing import Optional
+from typing import Optional, Tuple
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -23,22 +23,24 @@ class BaseSearchRouteMiddleware(BaseHTTPMiddleware, ABC):
         super().__init__(app)
         self._route_trie: Optional[RouteTrie] = route_trie
 
-    def search_route_url(self, request: Request) -> str:
+    def search_route_url(self, request: Request) -> Tuple[str, bool]:
+        is_match: bool = False
         url_path: str = _SEARCH_ROUTE_MIDDLEWARE_CONTEXT.get()
         if url_path:
-            return url_path
+            return url_path, True
         else:
             url_path = request.url.path
-
         if self._route_trie:
             search_route: Optional[Route] = self._route_trie.search_by_scope(url_path, request.scope)
             if search_route:
                 url_path = search_route.path
+                is_match = True
         else:
             for route in request.app.routes:
                 match, child_scope = route.matches(request.scope)
                 if match == Match.FULL:
                     url_path = route.path
+                    is_match = True
                     break
         _SEARCH_ROUTE_MIDDLEWARE_CONTEXT.set(url_path)
-        return url_path
+        return url_path, is_match
