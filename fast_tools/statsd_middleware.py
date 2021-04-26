@@ -42,14 +42,13 @@ class StatsdMiddleware(BaseSearchRouteMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         method: str = request.method
-        url_path: str = self.search_route_url(request)
+        url_path, is_match = self.search_route_url(request)
 
-        if url_path in self._block_url_set:
+        if url_path in self._block_url_set or not is_match:
             return await call_next(request)
 
         if self._url_replace_handle:
             url_path = self._url_replace_handle(url_path)
-
         metric: str = self._join_metric(self._metric, [method, url_path])
         self._client.gauge(self._join_metric(metric, ["request_in_progress"]), 1)
         self._client.gauge(self._join_metric(metric, ["request_count"]), 1)
@@ -63,11 +62,11 @@ class StatsdMiddleware(BaseSearchRouteMiddleware):
             request_result = "success"
             return response
         except Exception as e:
-            self._client.gauge(metric + f"exception.{type(e).__name__}", 1)
+            self._client.gauge(self._join_metric(metric, ["exception", type(e).__name__]), 1)
             raise e
         finally:
             self._client.timer(self._join_metric(metric, [request_result, "request_time"]), time.time() - start_time)
-            self._client.gauge(metric + f"{status_code}.response_count", 1)
             self._client.gauge(self._join_metric(metric, [str(status_code), "response_count"]), 1)
-            self._client.gauge(metric + "request_in_progress", -1)
+            self._client.gauge(self._join_metric(metric, [str(status_code), "response_count"]), 1)
+            self._client.gauge(self._join_metric(metric, ["request_in_progress"]), -1)
             self._client.gauge(self._join_metric(metric, ["request_in_progress"]), -1)
