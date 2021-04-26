@@ -35,7 +35,7 @@ class Task(object):
         while self.max_retry is None or retry_cnt < self.max_retry:
             try:
                 if asyncio.iscoroutinefunction(self.func):
-                    await func()  # type: ignore
+                    await self.func()  # type: ignore
                 else:
                     await run_in_threadpool(self.func)
                 break
