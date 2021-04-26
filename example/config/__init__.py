@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic.fields import Json
+from pydantic.fields import Field, Json
 
 from fast_tools.config import Config
 
@@ -26,6 +26,7 @@ class MyConfig(Config):
     DEBUG: bool
     HOST: str
     PORT: int
+    ALIAS_HOST: str = Field(alias="HOST")
 
     REDIS_ADDRESS: str
     REDIS_PASS: Optional[str] = None

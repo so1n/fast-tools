@@ -7,6 +7,7 @@ class TestConfig:
         ini_dict: dict = {
             'DEBUG': True,
             'HOST': '127.0.0.1',
+            'ALIAS_HOST': '127.0.0.1',
             'PORT': 8000,
             'REDIS_ADDRESS': 'localhost',
             'REDIS_PASS': None,
@@ -22,6 +23,7 @@ class TestConfig:
         yml_dict: dict = {
             'DEBUG': True,
             'HOST': '127.0.0.1',
+            'ALIAS_HOST': '127.0.0.1',
             'PORT': 8000,
             'REDIS_ADDRESS': 'localhost',
             'REDIS_PASS': None,

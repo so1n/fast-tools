@@ -8,6 +8,7 @@ from typing import Any, Dict, ForwardRef, Optional, Tuple, Type, Union
 
 import yaml
 from pydantic import BaseModel, create_model
+from pydantic.fields import FieldInfo
 
 __all__ = ["Config"]
 
@@ -94,7 +95,10 @@ class Config:
             if isinstance(annotation, str):
                 value: ForwardRef = ForwardRef(annotation, is_argument=False)
                 annotation = value._evaluate(sys.modules[self.__module__].__dict__, None)  # type: ignore
-            annotation_dict[key] = (annotation, ...)
+            default_value: Any = getattr(self, key, ...)
+            if not isinstance(default_value, FieldInfo):
+                default_value = ...
+            annotation_dict[key] = (annotation, default_value)
 
         dynamic_model: Type[BaseModel] = create_model(
             "DynamicModel",
