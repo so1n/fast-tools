@@ -60,7 +60,7 @@ class Lock(object):
         """
         Returns True if this key is locked by any process, otherwise False.
         """
-        return self._redis.client.get(self._lock_key) != ""
+        return await self._redis.client.get(self._lock_key) is not None
 
     async def do_release(self, expected_token: int) -> None:
         if not bool(
@@ -117,19 +117,22 @@ class RedisHelper(object):
 
     def init(self, conn_pool: "ConnectionsPool", namespace: Optional[str] = None) -> None:
         if conn_pool is None:
-            logging.error("conn_pool is none")
-        elif self._conn_pool is not None and not self._conn_pool.closed:
-            logging.error(f"Init error, {self.__class__.__name__} already init")
-        else:
-            self._conn_pool = conn_pool
-            self._client = Redis(self._conn_pool)
-            if namespace:
-                self._namespace = namespace
+            raise ConnectionError("conn_pool is none")
+        elif self._conn_pool is not None:
+            if not self._conn_pool.closed:
+                if not conn_pool.closed:
+                    conn_pool.close()
+                raise ConnectionError(f"Init error, {self.__class__.__name__} already init")
+
+        self._conn_pool = conn_pool
+        self._client = Redis(self._conn_pool)
+        if namespace:
+            self._namespace = namespace
 
     async def execute(self, command: str, *args: Any, **kwargs: Any) -> Any:
+        if self._conn_pool is None:
+            raise ConnectionError(f"Not init {self.__class__.__name__}, please run {self.__class__.__name__}.init")
         try:
-            if self._conn_pool is None:
-                raise ConnectionError(f"Not init {self.__class__.__name__}, please run {self.__class__.__name__}.init")
             async with self._conn_pool.get() as conn:
                 return await conn.execute(command, *args, **kwargs)
         except Exception as e:
@@ -209,9 +212,9 @@ class RedisHelper(object):
                 break
         return return_dict
 
-    def closed(self) -> None:
+    def closed(self) -> bool:
         if self._conn_pool is None:
-            logging.warning("redis helper already close")
+            return True
         else:
             return self._conn_pool.closed
 

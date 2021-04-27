@@ -39,6 +39,12 @@ async def user_login(request: Request) -> JSONResponse:
     return JSONResponse({"timestamp": time.time()})
 
 
+@app.get("/api/get_key_error")
+@cache(redis_helper, 60, after_cache_response_list=[cache_control], get_key_func=get_key)
+async def get_key_error() -> JSONResponse:
+    return JSONResponse({"timestamp": time.time()})
+
+
 @app.get("/api/null")
 @cache(redis_helper, 60)
 async def test_not_return_annotation():  # type: ignore

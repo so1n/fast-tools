@@ -33,7 +33,8 @@ redis_helper: "RedisHelper" = RedisHelper()
 
 @app.on_event("startup")
 async def startup() -> None:
-    redis_helper.init(await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"))
+    if redis_helper.closed():
+        redis_helper.init(await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"))
 
 
 app.add_middleware(

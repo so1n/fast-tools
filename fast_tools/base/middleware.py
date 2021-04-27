@@ -2,10 +2,9 @@ from abc import ABC
 from contextvars import ContextVar
 from typing import Optional, Tuple
 
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.routing import Match, Route
-from starlette.responses import Response
 from starlette.types import ASGIApp
 
 from .route_trie import RouteTrie  # type: ignore
