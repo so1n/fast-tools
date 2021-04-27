@@ -21,7 +21,7 @@ class Bucket(object):
 
 class TokenBucket(BaseLimitBackend):
     def __init__(self) -> None:
-        self._cache_dict: LRUCache = LRUCache(10000)
+        self._cache_dict: LRUCache[str, Bucket] = LRUCache(10000)
 
     @staticmethod
     def _gen_bucket(rule: Rule) -> "Bucket":
