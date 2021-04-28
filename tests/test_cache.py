@@ -52,3 +52,6 @@ class TestCache:
             assert "cache-control" not in null_1_response.headers
             assert "cache-control" not in null_2_response.headers
 
+            with pytest.raises(ValueError) as e:
+                client.get("/api/get_key_error")
+            assert e.value.args[0] == "Can not found request param"

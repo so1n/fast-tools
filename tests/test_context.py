@@ -1,8 +1,11 @@
 import aioredis  # type: ignore
+import uuid
+import pytest
 from pytest_mock import MockFixture
 from requests import Response
 from starlette.testclient import TestClient
 
+from fast_tools.context import ContextBaseModel, HeaderHelper
 from example.context import app
 from .conftest import AnyStringWith  # type: ignore
 
@@ -12,6 +15,7 @@ class TestContext:
         debug_patch = mocker.patch("example.context.logging.debug")
         info_patch = mocker.patch("example.context.logging.info")
         warning_patch = mocker.patch("example.context.logging.warning")
+        error_patch = mocker.patch("example.context.logging.error")
 
         with TestClient(app) as client:
             response: Response = client.get("/")
@@ -24,3 +28,10 @@ class TestContext:
         debug_patch.assert_called_with(f"test_ensure_future {client_id}")
         info_patch.assert_called_with(f"test_run_in_executor {client_id}")
         warning_patch.assert_called_with(f"test_call_soon {client_id}")
+        error_patch.assert_called_with(AnyStringWith("traceback info"))
+
+        with pytest.raises(RuntimeError) as e:
+            class NewContextModel(ContextBaseModel):
+                request_id: str = HeaderHelper.i("X-Request-Id", default_func=lambda request: str(uuid.uuid4()))
+
+        assert e.value.args[0] == "key:HeaderHelper:X-Request-Id already exists"

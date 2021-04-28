@@ -30,6 +30,9 @@ class ContextModel(ContextBaseModel):
     async def before_request(self, request: Request) -> None:
         self.http_client = httpx.AsyncClient()
 
+    async def after_response(self, request: Request, response: Response) -> None:
+        raise NotImplementedError()
+
     async def before_reset_context(self, request: Request, response: Optional[Response]) -> None:
         await self.http_client.aclose()
 
