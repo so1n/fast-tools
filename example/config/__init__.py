@@ -17,9 +17,9 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic.fields import Field, Json
+from pydantic.fields import Field
 
-from fast_tools.config import Config
+from fast_tools.config import Config, Json
 
 
 class MyConfig(Config):
@@ -35,8 +35,8 @@ class MyConfig(Config):
     MYSQL_DB_NAME: str
     MYSQL_DB_PASS: str
     MYSQL_DB_USER: str
-    ES_HOST: Json[List]  # type: ignore
-    TEST_LIST_INT: Json[List]  # type: ignore
+    ES_HOST: List[str] = Json.i()
+    TEST_LIST_INT: List[int] = Json.i()
     YML_ES_HOST: Optional[List[str]] = None
     YML_TEST_LIST_INT: Optional[List[int]] = None
 

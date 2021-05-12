@@ -1,7 +1,8 @@
 import asyncio
-import pytest
-from fast_tools.task import background_task, stop_task
 
+import pytest
+
+from fast_tools.task import background_task, stop_task
 
 pytestmark = pytest.mark.asyncio
 

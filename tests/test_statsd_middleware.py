@@ -1,15 +1,15 @@
 import asyncio
 from typing import Tuple
-from starlette.testclient import TestClient
-from example.statsd_middleware import app
 
+from starlette.testclient import TestClient
+
+from example.statsd_middleware import app
 
 result_queue: asyncio.Queue = asyncio.Queue()
 
 
 @app.on_event("startup")
 async def udp_server() -> None:
-
     class ServerProtocol(asyncio.DatagramProtocol):
         def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
             result_queue.put_nowait(data)
@@ -28,6 +28,7 @@ class TestExporter:
             client.get("/api/users/456/items/def")
 
         import time
+
         time.sleep(1)
         server_body_str: str = ""
         while not result_queue.empty():

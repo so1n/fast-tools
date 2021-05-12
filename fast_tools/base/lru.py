@@ -38,4 +38,3 @@ class LRUCache(Generic[KT, VT]):
 
     def set(self, key: KT, value: VT) -> None:
         self.__setitem__(key, value)
-

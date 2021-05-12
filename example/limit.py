@@ -41,10 +41,13 @@ app.add_middleware(
     limit.LimitMiddleware,
     limit_func=limit_by_user,
     rule_list=[
-        (r"^/api/user", [
-            limit.Rule(second=10, gen_token_num=1, init_token_num=1, group="user"),
-            limit.Rule(second=10, gen_token_num=1, init_token_num=2, group="admin")]
-         )
+        (
+            r"^/api/user",
+            [
+                limit.Rule(second=10, gen_token_num=1, init_token_num=1, group="user"),
+                limit.Rule(second=10, gen_token_num=1, init_token_num=2, group="admin"),
+            ],
+        )
     ],
 )
 

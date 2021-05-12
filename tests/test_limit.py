@@ -1,12 +1,14 @@
 import asyncio
-import aioredis  # type: ignore
 import time
+
+import aioredis  # type: ignore
 import pytest
 from requests import Response
 from starlette.testclient import TestClient
 
 from example.limit import app
 from fast_tools.base.redis_helper import RedisHelper
+
 from .conftest import AnyStringWith  # type: ignore
 
 
@@ -20,7 +22,7 @@ def clear() -> None:
             delete_key_list.append(key)
 
         if delete_key_list:
-            await redis_helper.client.delete('fake', *delete_key_list)
+            await redis_helper.client.delete("fake", *delete_key_list)
 
         await redis_helper.close()
 
@@ -29,7 +31,6 @@ def clear() -> None:
 
 
 class TestLimit:
-
     @staticmethod
     def _test_backend_helper(url: str) -> None:
         with TestClient(app) as client:

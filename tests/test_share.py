@@ -6,7 +6,6 @@ import pytest
 from example.share import delay_print
 from fast_tools.share import Share
 
-
 pytestmark = pytest.mark.asyncio
 share: "Share" = Share()
 
@@ -27,7 +26,6 @@ class TestShare:
         assert len({future.result() for future in done}) == 1
 
     async def test_class_wrapper_do(self) -> None:
-
         class TestClassWrapperDo(object):
             @share.wrapper_do()
             async def delay_print(self, num: int) -> int:
@@ -35,8 +33,9 @@ class TestShare:
 
         test_class_wrapper_do: "TestClassWrapperDo" = TestClassWrapperDo()
 
-        task_list: "List[Coroutine]" = [test_class_wrapper_do.delay_print(i) for i in
-                                        [21, 22, 23, 24, 25, 26, 27, 28, 29]]
+        task_list: "List[Coroutine]" = [
+            test_class_wrapper_do.delay_print(i) for i in [21, 22, 23, 24, 25, 26, 27, 28, 29]
+        ]
         done, _ = await asyncio.wait(task_list)
         assert len({future.result() for future in done}) == 1
 

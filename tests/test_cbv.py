@@ -4,8 +4,8 @@ from requests import Response
 from starlette.testclient import TestClient
 
 from example.cbv import app
-from .conftest import AnyStringWith  # type: ignore
 
+from .conftest import AnyStringWith  # type: ignore
 
 pytestmark = pytest.mark.asyncio
 
@@ -19,7 +19,7 @@ class TestCbv:
                 "message": "hello, world",
                 "user_agent": "testclient",
                 "host": "testserver",
-                "id": 345
+                "id": 345,
             }
             response = client.post("/")
             assert response.status_code == 200
@@ -27,5 +27,5 @@ class TestCbv:
                 "message": "hello, world",
                 "user_agent": "testclient",
                 "host": "testserver",
-                "id": 123
+                "id": 123,
             }

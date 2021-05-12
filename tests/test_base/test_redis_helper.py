@@ -3,8 +3,8 @@ from typing import AsyncGenerator, Dict
 
 import aioredis  # type: ignore
 import pytest
-from fast_tools.base.redis_helper import errors, Lock, LockError, Redis, RedisHelper
 
+from fast_tools.base.redis_helper import Lock, LockError, Redis, RedisHelper, errors
 
 pytestmark = pytest.mark.asyncio
 
@@ -32,8 +32,7 @@ class TestRedisHelper:
         assert e.value.args[0] == "conn_pool is none"
 
         redis_helper.init(
-            await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"),
-            namespace="test"
+            await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"), namespace="test"
         )
         assert redis_helper.namespace == "test"
 

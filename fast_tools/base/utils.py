@@ -8,7 +8,7 @@ async def as_first_completed(
     future_list: List[Union[Coroutine, asyncio.Future]], *, timeout: Optional[int] = None
 ) -> None:
     for future in future_list:
-        if not(asyncio.isfuture(future) or asyncio.iscoroutine(future)):
+        if not (asyncio.isfuture(future) or asyncio.iscoroutine(future)):
             raise TypeError(f"expect a list of futures, not {type(future).__name__}")
     loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
     todo_future_set: Set[asyncio.Future] = {asyncio.ensure_future(f, loop=loop) for f in set(future_list)}

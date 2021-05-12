@@ -63,7 +63,7 @@ async def root() -> dict:
     await loop.run_in_executor(None, partial(ctx.run, test_run_in_executor))  # type: ignore
     return {
         "message": context_model.to_dict(is_safe_return=True),  # not return CustomQuery
-        "client_id": id(context_model.http_client)
+        "client_id": id(context_model.http_client),
     }
 
 

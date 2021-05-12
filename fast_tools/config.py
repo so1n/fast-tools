@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -8,9 +9,9 @@ from typing import Any, Dict, ForwardRef, Optional, Tuple, Type, Union
 
 import yaml
 from pydantic import BaseModel, create_model
-from pydantic.fields import FieldInfo
+from pydantic.fields import FieldInfo, NoArgAnyCallable, Undefined
 
-__all__ = ["Config"]
+__all__ = ["Config", "Environ", "EnvironError", "Json"]
 
 
 class EnvironError(Exception):
@@ -48,6 +49,98 @@ class Environ(MutableMapping):
 
 
 environ = Environ()
+
+
+class BaseField(FieldInfo):
+    def __init__(
+        self,
+        default: Any = Undefined,
+        *,
+        default_factory: Optional[NoArgAnyCallable] = None,
+        alias: str = None,
+        title: str = None,
+        description: str = None,
+        const: bool = None,
+        gt: float = None,
+        ge: float = None,
+        lt: float = None,
+        le: float = None,
+        multiple_of: float = None,
+        min_items: int = None,
+        max_items: int = None,
+        min_length: int = None,
+        max_length: int = None,
+        regex: str = None,
+        **extra: Any,
+    ):
+        if self.__class__.__mro__[2] != FieldInfo:
+            raise RuntimeError("Only classes that inherit BaseField can be used")
+        super().__init__(
+            default,
+            default_factory=default_factory,
+            alias=alias,
+            title=title,
+            description=description,
+            const=const,
+            gt=gt,
+            ge=ge,
+            lt=lt,
+            le=le,
+            multiple_of=multiple_of,
+            min_items=min_items,
+            max_items=max_items,
+            min_length=min_length,
+            max_length=max_length,
+            regex=regex,
+            **extra,
+        )
+
+    @classmethod
+    def i(
+        cls,
+        default: Any = Undefined,
+        *,
+        default_factory: Optional[NoArgAnyCallable] = None,
+        alias: str = None,
+        title: str = None,
+        description: str = None,
+        const: bool = None,
+        gt: float = None,
+        ge: float = None,
+        lt: float = None,
+        le: float = None,
+        multiple_of: float = None,
+        min_items: int = None,
+        max_items: int = None,
+        min_length: int = None,
+        max_length: int = None,
+        regex: str = None,
+        **extra: Any,
+    ) -> Any:
+        """ignore mypy tip"""
+        return cls(
+            default,
+            default_factory=default_factory,
+            alias=alias,
+            title=title,
+            description=description,
+            const=const,
+            gt=gt,
+            ge=ge,
+            lt=lt,
+            le=le,
+            multiple_of=multiple_of,
+            min_items=min_items,
+            max_items=max_items,
+            min_length=min_length,
+            max_length=max_length,
+            regex=regex,
+            **extra,
+        )
+
+
+class Json(BaseField):
+    ...
 
 
 class Config:
@@ -89,16 +182,20 @@ class Config:
             if key != key.upper():
                 class_name: str = self.__class__.__name__
                 raise KeyError(f"key: {class_name}.{key} must like {class_name}.{key.upper()}")
-            if key not in self._config_dict:
-                self._config_dict[key] = getattr(self, key, ...)
+
+            default_value: Any = getattr(self, key, ...)
             annotation: Union[str, Type] = self.__annotations__[key]
             if isinstance(annotation, str):
                 value: ForwardRef = ForwardRef(annotation, is_argument=False)
                 annotation = value._evaluate(sys.modules[self.__module__].__dict__, None)  # type: ignore
-            default_value: Any = getattr(self, key, ...)
-            if not isinstance(default_value, FieldInfo):
-                default_value = ...
-            annotation_dict[key] = (annotation, default_value)
+
+            if isinstance(default_value, Json) and key in self._config_dict:
+                self._config_dict[key] = json.loads(self._config_dict[key])
+
+            if key not in self._config_dict:
+                self._config_dict[key] = default_value
+
+            annotation_dict[key] = (annotation, ... if not isinstance(default_value, FieldInfo) else default_value)
 
         dynamic_model: Type[BaseModel] = create_model(
             "DynamicModel",

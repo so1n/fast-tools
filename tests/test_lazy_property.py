@@ -1,15 +1,14 @@
 import time
+
 import pytest
 
-from fast_tools.lazy_property import LazyProperty, LazyAsyncPropertyNoParam, LazyPropertyNoParam
-
+from fast_tools.lazy_property import LazyAsyncPropertyNoParam, LazyProperty, LazyPropertyNoParam
 
 pytestmark = pytest.mark.asyncio
 
 
 class TestLazyProperty:
     async def test_lazy_property_fun(self) -> None:
-
         @LazyProperty()
         def _demo(a: int, b: int) -> int:
             return a + b

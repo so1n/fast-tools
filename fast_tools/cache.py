@@ -7,8 +7,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from fast_tools.base import NAMESPACE
-from fast_tools.base import redis_helper
+from fast_tools.base import NAMESPACE, redis_helper
 
 
 def _check_typing_type(_type: Type, origin_name: str) -> bool:
@@ -40,6 +39,7 @@ def cache(
     json_response: response like `JSONResponse` or `UJSONResponse`
     after_cache_response:list: cache response data handle
     """
+
     def wrapper(func: Callable) -> Callable:
         prefix: str = f"{namespace}:{alias or func.__name__}"
 

@@ -1,40 +1,41 @@
 from example.config import MyConfig
+
 from .conftest import AnyStringWith  # type: ignore
 
 
 class TestConfig:
     def test_config(self) -> None:
         ini_dict: dict = {
-            'DEBUG': True,
-            'HOST': '127.0.0.1',
-            'ALIAS_HOST': '127.0.0.1',
-            'PORT': 8000,
-            'REDIS_ADDRESS': 'localhost',
-            'REDIS_PASS': None,
-            'MYSQL_DB_HOST': 'localhost',
-            'MYSQL_DB_NAME': 'rootdb',
-            'MYSQL_DB_PASS': 'rootpass',
-            'MYSQL_DB_USER': 'root',
-            'ES_HOST': ['127.0.0.1:9200', '127.0.0.2:9200'],
-            'TEST_LIST_INT': [1, 2, 3, 4],
-            'YML_ES_HOST': None,
-            'YML_TEST_LIST_INT': None
+            "DEBUG": True,
+            "HOST": "127.0.0.1",
+            "ALIAS_HOST": "127.0.0.1",
+            "PORT": 8000,
+            "REDIS_ADDRESS": "localhost",
+            "REDIS_PASS": None,
+            "MYSQL_DB_HOST": "localhost",
+            "MYSQL_DB_NAME": "rootdb",
+            "MYSQL_DB_PASS": "rootpass",
+            "MYSQL_DB_USER": "root",
+            "ES_HOST": ["127.0.0.1:9200", "127.0.0.2:9200"],
+            "TEST_LIST_INT": [1, 2, 3, 4],
+            "YML_ES_HOST": None,
+            "YML_TEST_LIST_INT": None,
         }
         yml_dict: dict = {
-            'DEBUG': True,
-            'HOST': '127.0.0.1',
-            'ALIAS_HOST': '127.0.0.1',
-            'PORT': 8000,
-            'REDIS_ADDRESS': 'localhost',
-            'REDIS_PASS': None,
-            'MYSQL_DB_HOST': 'localhost',
-            'MYSQL_DB_NAME': 'rootdb',
-            'MYSQL_DB_PASS': 'rootpass',
-            'MYSQL_DB_USER': 'root',
-            'ES_HOST': ['127.0.0.1:9200', '127.0.0.2:9200'],
-            'TEST_LIST_INT': [1, 2, 3, 4],
-            'YML_ES_HOST': ['127.0.0.1:9200', '127.0.0.2:9200'],
-            'YML_TEST_LIST_INT': [1, 2, 3, 4],
+            "DEBUG": True,
+            "HOST": "127.0.0.1",
+            "ALIAS_HOST": "127.0.0.1",
+            "PORT": 8000,
+            "REDIS_ADDRESS": "localhost",
+            "REDIS_PASS": None,
+            "MYSQL_DB_HOST": "localhost",
+            "MYSQL_DB_NAME": "rootdb",
+            "MYSQL_DB_PASS": "rootpass",
+            "MYSQL_DB_USER": "root",
+            "ES_HOST": ["127.0.0.1:9200", "127.0.0.2:9200"],
+            "TEST_LIST_INT": [1, 2, 3, 4],
+            "YML_ES_HOST": ["127.0.0.1:9200", "127.0.0.2:9200"],
+            "YML_TEST_LIST_INT": [1, 2, 3, 4],
         }
 
         assert MyConfig("example/config/example_config.ini", group="test").model.dict() == ini_dict

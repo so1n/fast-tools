@@ -1,12 +1,14 @@
-import aioredis  # type: ignore
 import uuid
+
+import aioredis  # type: ignore
 import pytest
 from pytest_mock import MockFixture
 from requests import Response
 from starlette.testclient import TestClient
 
-from fast_tools.context import ContextBaseModel, HeaderHelper
 from example.context import app
+from fast_tools.context import ContextBaseModel, HeaderHelper
+
 from .conftest import AnyStringWith  # type: ignore
 
 
@@ -31,6 +33,7 @@ class TestContext:
         error_patch.assert_called_with(AnyStringWith("traceback info"))
 
         with pytest.raises(RuntimeError) as e:
+
             class NewContextModel(ContextBaseModel):
                 request_id: str = HeaderHelper.i("X-Request-Id", default_func=lambda request: str(uuid.uuid4()))
 

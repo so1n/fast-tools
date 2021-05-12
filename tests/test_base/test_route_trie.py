@@ -2,7 +2,7 @@ from typing import List, Optional
 
 from starlette.routing import Route
 
-from example.route_trie import route_trie, root
+from example.route_trie import root, route_trie
 
 
 class TestRouteTrie:
