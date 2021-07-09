@@ -18,6 +18,11 @@ async def udp_server() -> None:
     await loop.create_datagram_endpoint(lambda: ServerProtocol(), local_addr=("localhost", 8125))
 
 
+@app.on_event("shutdown")
+async def util_received_msg() -> None:
+    await asyncio.sleep(1)
+
+
 class TestExporter:
     def test_exporter(self) -> None:
         with TestClient(app) as client:
@@ -27,9 +32,6 @@ class TestExporter:
             client.get("/api/users/123/items/abc")
             client.get("/api/users/456/items/def")
 
-        import time
-
-        time.sleep(1)
         server_body_str: str = ""
         while not result_queue.empty():
             server_body_str += result_queue.get_nowait().decode() + "\n"
