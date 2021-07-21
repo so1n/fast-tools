@@ -178,24 +178,25 @@ class Config:
 
     def _init_obj(self) -> None:
         annotation_dict: Dict[str, Tuple[Any, ...]] = {}
-        for key in self.__annotations__:
-            if key != key.upper():
-                class_name: str = self.__class__.__name__
-                raise KeyError(f"key: {class_name}.{key} must like {class_name}.{key.upper()}")
+        for _class in self.__class__.mro():
+            for key in getattr(_class, "__annotations__", []):
+                if key != key.upper():
+                    class_name: str = _class.__name__
+                    raise KeyError(f"key: {class_name}.{key} must like {class_name}.{key.upper()}")
 
-            default_value: Any = getattr(self, key, ...)
-            annotation: Union[str, Type] = self.__annotations__[key]
-            if isinstance(annotation, str):
-                value: ForwardRef = ForwardRef(annotation, is_argument=False)
-                annotation = value._evaluate(sys.modules[self.__module__].__dict__, None)  # type: ignore
+                default_value: Any = getattr(self, key, ...)
+                annotation: Union[str, Type] = _class.__annotations__[key]
+                if isinstance(annotation, str):
+                    value: ForwardRef = ForwardRef(annotation, is_argument=False)
+                    annotation = value._evaluate(sys.modules[self.__module__].__dict__, None)  # type: ignore
 
-            if isinstance(default_value, Json) and key in self._config_dict:
-                self._config_dict[key] = json.loads(self._config_dict[key])
+                if isinstance(default_value, Json) and key in self._config_dict:
+                    self._config_dict[key] = json.loads(self._config_dict[key])
 
-            if key not in self._config_dict:
-                self._config_dict[key] = default_value
+                if key not in self._config_dict:
+                    self._config_dict[key] = default_value
 
-            annotation_dict[key] = (annotation, ... if not isinstance(default_value, FieldInfo) else default_value)
+                annotation_dict[key] = (annotation, ... if not isinstance(default_value, FieldInfo) else default_value)
 
         dynamic_model: Type[BaseModel] = create_model(
             "DynamicModel",
