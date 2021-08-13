@@ -1,4 +1,5 @@
 from .lru import LRUCache
+from ._json import json
 from .middleware import BaseSearchRouteMiddleware
 from .redis_helper import RedisHelper
 from .route_trie import RouteTrie

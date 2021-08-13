@@ -1,9 +1,9 @@
 from collections import OrderedDict
+from dataclasses import MISSING
 from threading import Lock
 from typing import Any, Generic, TypeVar, Union
 
 __all__ = ["LRUCache"]
-_MISS_OBJECT = object()
 KT = TypeVar("KT")
 VT = TypeVar("VT")
 
@@ -22,17 +22,17 @@ class LRUCache(Generic[KT, VT]):
 
     def __setitem__(self, key: KT, value: VT) -> None:
         with self._lock:
-            if len(self.cache) >= self.capacity:
-                self.cache.popitem(last=False)
             if key in self.cache:
                 self.cache.pop(key)
+            elif len(self.cache) >= self.capacity:
+                self.cache.popitem(last=False)
             self.cache[key] = value
 
-    def get(self, key: KT, default_value: Union[VT, object] = _MISS_OBJECT) -> VT:
+    def get(self, key: KT, default_value: Union[VT, object] = MISSING) -> VT:
         try:
             return self.__getitem__(key)
         except KeyError as e:
-            if default_value is _MISS_OBJECT:
+            if default_value is MISSING:
                 raise e
             return default_value  # type: ignore
 
