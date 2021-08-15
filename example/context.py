@@ -7,31 +7,29 @@
 __author__ = "so1n"
 __date__ = "2020-06"
 import asyncio
-import logging
 import uuid
 from contextvars import Context, copy_context
 from functools import partial
-from typing import Optional
+from typing import Set, Optional
 
 import httpx
 from fastapi import FastAPI, Request, Response
 
-from fast_tools.context import ContextBaseModel, ContextMiddleware, CustomHelper, HeaderHelper
+from fast_tools.context import ContextBaseModel, ContextMiddleware, HeaderHelper
 
 app: FastAPI = FastAPI()
+check_set: Set[int] = set()
 
 
 class ContextModel(ContextBaseModel):
+    http_client: httpx.AsyncClient
     request_id: str = HeaderHelper.i("X-Request-Id", default_func=lambda request: str(uuid.uuid4()))
     ip: str = HeaderHelper.i("X-Real-IP", default_func=lambda request: request.client.host)
     user_agent: str = HeaderHelper.i("User-Agent")
-    http_client: httpx.AsyncClient = CustomHelper.i("http_client")
 
     async def before_request(self, request: Request) -> None:
         self.http_client = httpx.AsyncClient()
-
-    async def after_response(self, request: Request, response: Response) -> None:
-        raise NotImplementedError()
+        check_set.add(id(self.http_client))
 
     async def before_reset_context(self, request: Request, response: Optional[Response]) -> None:
         await self.http_client.aclose()
@@ -42,15 +40,15 @@ app.add_middleware(ContextMiddleware, context_model=context_model)
 
 
 async def test_ensure_future() -> None:
-    logging.debug(f"test_ensure_future {id(context_model.http_client)}")
+    assert id(context_model.http_client) in check_set
 
 
 def test_run_in_executor() -> None:
-    logging.info(f"test_run_in_executor {id(context_model.http_client)}")
+    assert id(context_model.http_client) in check_set
 
 
 def test_call_soon() -> None:
-    logging.warning(f"test_call_soon {id(context_model.http_client)}")
+    assert id(context_model.http_client) in check_set
 
 
 @app.get("/")

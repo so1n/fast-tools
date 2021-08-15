@@ -1,7 +1,8 @@
 import logging
 import traceback
 from contextvars import ContextVar, Token
-from typing import Any, Callable, Coroutine, Dict, NoReturn, Optional, Set, Type, get_type_hints
+from dataclasses import MISSING
+from typing import Any, Callable, Coroutine, Dict, List, NoReturn, Optional, Set, Type, get_type_hints
 
 from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -14,8 +15,7 @@ _CAN_JSON_TYPE_SET: Set[type] = {bool, dict, float, int, list, str, tuple, type(
 _CONTEXT_KEY_SET: Set[str] = set()
 _CONTEXT_DICT_TYPE = Dict[str, Any]
 _FAST_TOOLS_CONTEXT: ContextVar[Dict[str, Any]] = ContextVar(f"{NAMESPACE}_context", default={})
-_MISS_OBJECT: object = object()
-_REQUEST_KEY: str = f"{NAMESPACE}_request"
+_TOKEN_TEMP: List[Optional[Token]] = [None]
 
 
 class BaseContextHelper(object):
@@ -32,7 +32,7 @@ class BaseContextHelper(object):
     def _get_context(self) -> Any:
         """get value by key"""
         ctx_dict: _CONTEXT_DICT_TYPE = _FAST_TOOLS_CONTEXT.get()
-        return ctx_dict.get(self._key, _MISS_OBJECT)
+        return ctx_dict.get(self._key, MISSING)
 
     def _set_context(self, value: Any) -> None:
         """set value by key"""
@@ -61,12 +61,11 @@ class HeaderHelper(BaseContextHelper):
     def __get__(self, instance: "ContextBaseModel", owner: "Type[ContextBaseModel]") -> Any:
         # get value from context
         value: Any = self._get_context()
-        if value is not _MISS_OBJECT:
+        if value is not MISSING:
             return value
 
         # get request obj from context
-        ctx_dict: _CONTEXT_DICT_TYPE = _FAST_TOOLS_CONTEXT.get()
-        request: Request = ctx_dict[_REQUEST_KEY]
+        request: Request = instance.request
 
         # get header value from request
         headers: Headers = request.headers
@@ -87,16 +86,30 @@ class HeaderHelper(BaseContextHelper):
         return cls(key, default_func)
 
 
-class CustomHelper(BaseContextHelper):
-    ...
-
-
 class ContextBaseModel(object):
-    @classmethod
-    def to_dict(cls, is_safe_return: bool = False) -> Dict[str, Any]:
+    request: Request
+
+    def __getattr__(self, key: str) -> Any:
+        value: Any = _FAST_TOOLS_CONTEXT.get().get(key)
+        return value
+
+    def __setattr__(self, key: str, value: Any) -> None:
+        _FAST_TOOLS_CONTEXT.get()[key] = value
+
+    def __enter__(self) -> "ContextBaseModel":
+        _TOKEN_TEMP[0] = _FAST_TOOLS_CONTEXT.set({})
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        token: Optional[Token] = _TOKEN_TEMP[0]
+        if token:
+            _FAST_TOOLS_CONTEXT.reset(token)
+            _TOKEN_TEMP[0] = None
+
+    def to_dict(self, is_safe_return: bool = False) -> Dict[str, Any]:
         _dict: _CONTEXT_DICT_TYPE = {}
-        for key, annotation in get_type_hints(cls).items():
-            value = getattr(cls, key)
+        for key, annotation in get_type_hints(self.__class__).items():
+            value = getattr(self, key)
             if is_safe_return and type(value) not in _CAN_JSON_TYPE_SET:
                 continue
             _dict[key] = value
@@ -129,16 +142,14 @@ class ContextMiddleware(BaseHTTPMiddleware):
             logging.error(f"{corn.__name__} error:{e} traceback info:{traceback.format_exc()}")
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        context_dict: _CONTEXT_DICT_TYPE = {_REQUEST_KEY: request}
-        token: Token = _FAST_TOOLS_CONTEXT.set(context_dict)
+        with self.context_model as context:
+            context.request = request
+            await self._safe_context_life_handle(self.context_model.before_request(request))
 
-        await self._safe_context_life_handle(self.context_model.before_request(request))
-
-        response: Optional[Response] = None
-        try:
-            response = await call_next(request)
-            await self._safe_context_life_handle(self.context_model.after_response(request, response))
-            return response
-        finally:
-            await self._safe_context_life_handle(self.context_model.before_reset_context(request, response))
-            _FAST_TOOLS_CONTEXT.reset(token)
+            response: Optional[Response] = None
+            try:
+                response = await call_next(request)
+                await self._safe_context_life_handle(self.context_model.after_response(request, response))
+                return response
+            finally:
+                await self._safe_context_life_handle(self.context_model.before_reset_context(request, response))
