@@ -4,7 +4,7 @@ from typing import AsyncGenerator, Dict
 import aioredis  # type: ignore
 import pytest
 
-from fast_tools.base.redis_helper import Lock, LockError, Redis, RedisHelper, errors
+from fast_tools.base.redis_helper import Lock, LockError, RedisHelper, errors
 
 pytestmark = pytest.mark.asyncio
 
@@ -22,7 +22,7 @@ async def redis_helper() -> AsyncGenerator[RedisHelper, None]:
 class TestRedisHelper:
     def test_not_run_init(self) -> None:
         with pytest.raises(ConnectionError) as e:
-            client: Redis = RedisHelper().client
+            RedisHelper().client
         assert e.value.args[0] == "Not init RedisHelper, please run RedisHelper.init"
 
     async def test_init(self) -> None:

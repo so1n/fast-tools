@@ -7,7 +7,7 @@ from collections.abc import MutableMapping
 from configparser import ConfigParser
 from typing import Any, Dict, ForwardRef, Optional, Tuple, Type, Union
 
-import yaml
+import yaml  # type: ignore
 from pydantic import BaseModel, create_model
 from pydantic.fields import FieldInfo, NoArgAnyCallable, Undefined
 

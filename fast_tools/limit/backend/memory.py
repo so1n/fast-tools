@@ -1,7 +1,6 @@
 import threading
 import time
 from dataclasses import dataclass, field
-from threading import Lock
 from typing import Optional
 
 from fast_tools.base import LRUCache

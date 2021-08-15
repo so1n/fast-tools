@@ -112,7 +112,7 @@ app.add_route("/metrics", get_metrics)  # 添加metrics的相关url,方便promet
 ### 1.3 example
 更多代码请看[example](https://github.com/so1n/fast-tools/blob/master/example/exporter.py)
 ## 2.cbv
-- 说明:由于fastapi的改动,目前尚未支持cbv模式,只有[fastapi_utils](https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py) 
+- 说明:由于fastapi的改动,目前尚未支持cbv模式,只有[fastapi_utils](https://github.com/dmontagu/fastapi-utils/blob/master/fastapi_utils/cbv.py)
 提供了cbv的支持, 但觉得使用起来不是很方便,所以复用了它的核心代码,并做出了一些修改,可以像`Starlette`使用cbv,同时提供`cbv_decorator`来支持fastapi的其他功能.
 - 适用框架: `FastApi`
 ```python
@@ -217,7 +217,7 @@ app: FastAPI = FastAPI()
 
 class ContextModel(ContextBaseModel):
     """对contextvars的封装,需要继承ContextBaseModel,并添加到中间件中"""
-    
+
     # HeaderHelper是一个获取header数据并放置到context中,如果获取不到对应的数据,则会从default_func的返回值获取
     request_id: str = HeaderHelper(
         'X-Request-Id',
@@ -228,7 +228,7 @@ class ContextModel(ContextBaseModel):
         default_func=lambda request: request.client.host
     )
     user_agent: str = HeaderHelper('User-Agent')
-    
+
     # CustomHelper是对Context调用的封装,需要自己设置一个key, 在当前上下文中可以读取数据(如果要设置数据,需要先实例化)
     http_client: httpx.AsyncClient = CustomHelper('http_client')
 
@@ -376,7 +376,7 @@ if __name__ == '__main__':
     uvicorn.run(app)
 ```
 ## 7.cache
-- 说明: 利用函数的return type hint, 自适应的缓存对应的响应,并在下次请求且缓存时间未过期时,返回缓存数据. 
+- 说明: 利用函数的return type hint, 自适应的缓存对应的响应,并在下次请求且缓存时间未过期时,返回缓存数据.
 - 适用框架: `FastApi`,`Starlette`
 - PS: 之所以使用return type hint判断,而不是根据数据进行判断,是可以减少判断次数,有IDE编写代码时,返回响应会跟return type hint一样
 ```python
@@ -414,7 +414,7 @@ async def root() -> dict:
 # adter_cache_response_list支持传入函数,并在返回缓存响应前执行他
 # cache_control会在返回缓存响应时,在http头添加缓存时间
 @app.get("/api/users/login")
-@cache(redis_helper, 60, after_cache_response_list=[cache_control]) 
+@cache(redis_helper, 60, after_cache_response_list=[cache_control])
 async def user_login() -> JSONResponse:
     """response类型的缓存并不会缓存整个实例,而是缓存实例里的主要数据,并再下次返回缓存时重新拼接成新的respnose"""
     return JSONResponse({"timestamp": time.time()})

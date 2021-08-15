@@ -17,6 +17,7 @@ class LazyProperty:
     ...     def value(self, value):
     ...         return value * value
     """
+
     def __init__(self, is_class_func: bool = False):
         self._is_class_func: bool = is_class_func
 

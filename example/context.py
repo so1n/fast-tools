@@ -10,7 +10,7 @@ import asyncio
 import uuid
 from contextvars import Context, copy_context
 from functools import partial
-from typing import Set, Optional
+from typing import Optional, Set
 
 import httpx
 from fastapi import FastAPI, Request, Response

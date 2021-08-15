@@ -1,4 +1,4 @@
-from requests import Response
+from requests import Response  # type: ignore
 from starlette.testclient import TestClient
 
 from example.exporter import app

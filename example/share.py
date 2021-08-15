@@ -35,7 +35,7 @@ async def run_cancel(share: "Share") -> None:
     try:
         done, _ = await asyncio.wait(task_list)
         print("run cancel result", [future.result() for future in done])
-    except asyncio.CancelledError as e:
+    except asyncio.CancelledError:
         print("run cancel error: asyncio.CancelledError")
     print("run cancel end", time.time())
 

@@ -1,7 +1,4 @@
-from prometheus_client import (  # type: ignore
-    CONTENT_TYPE_LATEST,
-    generate_latest,
-)
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest  # type: ignore
 from starlette.requests import Request
 from starlette.responses import Response
 

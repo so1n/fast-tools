@@ -1,7 +1,7 @@
 import os
 from typing import Optional
-from prometheus_client import CollectorRegistry, REGISTRY, multiprocess
 
+from prometheus_client import REGISTRY, CollectorRegistry, multiprocess
 
 registry: CollectorRegistry = REGISTRY
 

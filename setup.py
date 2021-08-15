@@ -8,7 +8,8 @@ setuptools.setup(
     version="1.1.1",
     author="so1n",
     author_email="so1n897046026@gmail.com",
-    description="fast-tools is a FastApi/Starlette toolset, Most of the tools can be used in FastApi/Starlette, a few tools only support FastApi which is divided into the lack of compatibility with FastApi",
+    description="fast-tools is a FastApi/Starlette toolset, Most of the tools can be used in FastApi/Starlette, "
+    "a few tools only support FastApi which is divided into the lack of compatibility with FastApi",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/so1n/fast-tools",

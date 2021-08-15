@@ -117,16 +117,13 @@ class ContextBaseModel(object):
 
     async def before_request(self, request: Request) -> None:
         """Execute before processing the request, usually to initialize the instance"""
-        pass
 
     async def after_response(self, request: Request, response: Response) -> None:
         """Execute after processing the response (if the execution is abnormal, it will not be executed)"""
-        pass
 
     async def before_reset_context(self, request: Request, response: Optional[Response]) -> None:
         """between after response and before reset context execution
         (regardless of whether the response is an exception)"""
-        pass
 
 
 class ContextMiddleware(BaseHTTPMiddleware):

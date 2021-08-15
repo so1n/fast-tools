@@ -3,7 +3,7 @@ import uuid
 import aioredis  # type: ignore
 import pytest
 from pytest_mock import MockFixture
-from requests import Response
+from requests import Response  # type: ignore
 from starlette.testclient import TestClient
 
 from example.context import app

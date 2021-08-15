@@ -3,7 +3,7 @@ import time
 
 import aioredis  # type: ignore
 import pytest
-from requests import Response
+from requests import Response  # type: ignore
 from starlette.testclient import TestClient
 
 from example.cache import app

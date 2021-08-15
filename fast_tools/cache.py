@@ -103,7 +103,6 @@ def cache(
                         content = json.loads(content)
                     except json.JSONDecodeError as e:
                         logging.exception(e)
-                        pass
 
                     await backend.set_dict(
                         key,
