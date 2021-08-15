@@ -1,6 +1,7 @@
 import threading
 import time
 from dataclasses import dataclass, field
+from threading import Lock
 from typing import Optional
 
 from fast_tools.base import LRUCache
@@ -20,11 +21,12 @@ class Bucket(object):
 
 
 class TokenBucket(BaseLimitBackend):
-    def __init__(self) -> None:
-        self._cache_dict: LRUCache[str, Bucket] = LRUCache(10000)
+    def __init__(self, capacity: Optional[int] = None) -> None:
+        self._cache_dict: LRUCache[str, Bucket] = LRUCache(capacity or 10000)
 
     @staticmethod
     def _gen_bucket(rule: Rule) -> "Bucket":
+        """gen bucket by rule"""
         bucket: Bucket = Bucket(
             rate=rule.rate,
             token_num=rule.init_token_num,
@@ -33,7 +35,7 @@ class TokenBucket(BaseLimitBackend):
         )
         return bucket
 
-    def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+    def can_next(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         bucket: "Bucket" = self._cache_dict.get(key, self._gen_bucket(rule))
         now_timestamp: float = time.time()
         if bucket.block_time and bucket.block_timestamp - now_timestamp > 0:
@@ -60,7 +62,7 @@ class TokenBucket(BaseLimitBackend):
 
         self._cache_dict.set(key, bucket)
         if now_token_num < bucket.max_token_num:
-            return 0
+            return 0.0
         else:
             return 1 / bucket.rate
 
@@ -83,9 +85,9 @@ class ThreadingTokenBucket(TokenBucket):
         super().__init__()
         self._lock: "threading.Lock" = threading.Lock()
 
-    def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+    def can_next(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         with self._lock:
-            return super().can_requests(key, rule, token_num)
+            return super().can_next(key, rule, token_num)
 
     def expected_time(self, key: str, rule: Rule) -> float:
         with self._lock:
@@ -98,6 +100,6 @@ if __name__ == "__main__":
     test_key: str = "test"
     print(token_bucket.expected_time(test_key, test_rule))
     print(token_bucket.get_token_num(test_key))
-    token_bucket.can_requests(test_key, test_rule)
+    token_bucket.can_next(test_key, test_rule)
     print(token_bucket.expected_time(test_key, test_rule))
     print(token_bucket.get_token_num(test_key))

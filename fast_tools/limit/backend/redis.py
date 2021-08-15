@@ -18,18 +18,18 @@ class BaseRedisBackend(BaseLimitBackend, ABC):
         if bucket_block_time is not None and await self._backend.exists(block_time_key):
             return False
 
-        can_requests: bool = await func()
-        if not can_requests and bucket_block_time is not None:
+        can_next: bool = await func()
+        if not can_next and bucket_block_time is not None:
             await self._backend.client.set(block_time_key, bucket_block_time, expire=bucket_block_time)
 
-        return can_requests
+        return can_next
 
 
 class RedisFixedWindowBackend(BaseRedisBackend):
-    def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> Union[bool, Coroutine[Any, Any, bool]]:
+    def can_next(self, key: str, rule: Rule, token_num: int = 1) -> Union[bool, Coroutine[Any, Any, bool]]:
         key = f"{self._backend.namespace}:{key}"
 
-        async def _can_requests() -> bool:
+        async def _can_next() -> bool:
             """
             In the current time(rule.get_second()) window,
              whether the existing value(access_num) exceeds the maximum value(rule.gen_token_num)
@@ -38,10 +38,10 @@ class RedisFixedWindowBackend(BaseRedisBackend):
             if access_num == 1:
                 await self._backend.client.expire(key, rule.total_second)
 
-            can_requests: bool = not (access_num > rule.gen_token_num)
-            return can_requests
+            can_next: bool = not (access_num > rule.gen_token_num)
+            return can_next
 
-        return self._block_time_handle(key, rule, _can_requests)
+        return self._block_time_handle(key, rule, _can_next)
 
     def expected_time(self, key: str, rule: Rule) -> Union[float, Coroutine[Any, Any, float]]:
         key = f"{self._backend.namespace}:{key}"
@@ -90,16 +90,16 @@ class RedisCellBackend(BaseRedisBackend):
         )
         return result
 
-    async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+    async def can_next(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         key = f"{self._backend.namespace}:{key}"
 
-        async def _can_requests() -> bool:
+        async def _can_next() -> bool:
             result: List[int] = await self._call_cell(key, rule, token_num)
-            can_requests: bool = not bool(result[0])
+            can_next: bool = not bool(result[0])
             await self._backend.client.expire(key, rule.total_second)
-            return can_requests
+            return can_next
 
-        return await self._block_time_handle(key, rule, _can_requests)
+        return await self._block_time_handle(key, rule, _can_next)
 
     async def expected_time(self, key: str, rule: Rule) -> float:
         key = f"{self._backend.namespace}:{key}"
@@ -147,17 +147,17 @@ else
 end
     """
 
-    async def can_requests(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+    async def can_next(self, key: str, rule: Rule, token_num: int = 1) -> bool:
         key = f"{self._backend.namespace}:{key}"
 
-        async def _can_requests() -> bool:
+        async def _can_next() -> bool:
             now_token: int = await self._backend.client.eval(
                 self._lua_script, keys=[key], args=[time.time(), rule.rate, rule.max_token_num, rule.init_token_num]
             )
             await self._backend.client.expire(key, rule.total_second)
             return now_token >= 0
 
-        return await self._block_time_handle(key, rule, _can_requests)
+        return await self._block_time_handle(key, rule, _can_next)
 
     async def expected_time(self, key: str, rule: Rule) -> float:
         key = f"{self._backend.namespace}:{key}"

@@ -64,7 +64,7 @@ def limit(
                 return await _can_request_handle(enable_match_fail_pass)
 
             key = f"{group}:{key}"
-            can_requests: Union[bool, Awaitable[bool]] = backend.can_requests(key, rule)
+            can_requests: Union[bool, Awaitable[bool]] = backend.can_next(key, rule)
             if asyncio.iscoroutine(can_requests):
                 can_requests = await can_requests  # type: ignore
 
