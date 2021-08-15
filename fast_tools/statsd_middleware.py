@@ -55,18 +55,14 @@ class StatsdMiddleware(BaseSearchRouteMiddleware):
 
         status_code: int = 500
         start_time: float = time.time()
-        request_result: str = "fail"
         try:
             response: Response = await call_next(request)
             status_code = response.status_code
-            request_result = "success"
             return response
         except Exception as e:
             self._client.gauge(self._join_metric(metric, ["exception", type(e).__name__]), 1)
             raise e
         finally:
-            self._client.timer(self._join_metric(metric, [request_result, "request_time"]), time.time() - start_time)
+            self._client.timer(self._join_metric(metric, ["request_time"]), time.time() - start_time)
             self._client.gauge(self._join_metric(metric, [str(status_code), "response_count"]), 1)
-            self._client.gauge(self._join_metric(metric, [str(status_code), "response_count"]), 1)
-            self._client.gauge(self._join_metric(metric, ["request_in_progress"]), -1)
             self._client.gauge(self._join_metric(metric, ["request_in_progress"]), -1)

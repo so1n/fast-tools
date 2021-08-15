@@ -4,13 +4,7 @@ from decimal import Decimal
 from functools import singledispatch
 from typing import Any, Union
 
-try:
-    import ojson as json  # type: ignore
-except ImportError:
-    try:
-        import ujson as json  # type: ignore
-    except ImportError:
-        import json  # type: ignore
+from .base import json
 
 
 @singledispatch

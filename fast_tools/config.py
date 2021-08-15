@@ -155,7 +155,15 @@ class Config:
             try:
                 from environs import Env
 
-                Env().read_env()
+                env: Env = Env()
+                try:
+                    env.read_env()
+                except Exception:
+                    pass
+                try:
+                    env.read_env(os.path.join(os.getcwd(), ".env"))
+                except Exception:
+                    pass
             except ImportError as e:
                 logging.warn("read .env fail, please run `pip install environs`")
                 raise e

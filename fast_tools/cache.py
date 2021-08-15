@@ -1,5 +1,4 @@
 import inspect
-import json
 import logging
 from functools import wraps
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
@@ -7,7 +6,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from fast_tools.base import NAMESPACE, redis_helper
+from fast_tools.base import NAMESPACE, json, redis_helper
 
 
 def _check_typing_type(_type: Type, origin_name: str) -> bool:
@@ -36,7 +35,9 @@ def cache(
     backend: now only support `RedisHelper`
     expire: cache expiration time
     namespace: key namespace
+    alias: func alias name
     json_response: response like `JSONResponse` or `UJSONResponse`
+    get_key_func:
     after_cache_response:list: cache response data handle
     """
 
@@ -71,8 +72,7 @@ def cache(
             if ret:
                 return await _cache_response_handle(json_response(ret), key)
 
-            lock: redis_helper.Lock = backend.lock(key + ":lock")
-            async with lock:
+            async with backend.lock(key + ":lock"):
                 # get lock
                 ret = await backend.get_dict(key)
                 # check cache response data
@@ -90,8 +90,7 @@ def cache(
             if ret:
                 return await _cache_response_handle(return_annotation(**ret), key)
 
-            lock: redis_helper.Lock = backend.lock(key + ":lock")
-            async with lock:
+            async with backend.lock(key + ":lock"):
                 ret = await backend.get_dict(key)
                 if ret:
                     return await _cache_response_handle(return_annotation(**ret), key)
@@ -102,7 +101,8 @@ def cache(
                     content: str = resp.body.decode()
                     try:
                         content = json.loads(content)
-                    except json.JSONDecodeError:
+                    except json.JSONDecodeError as e:
+                        logging.exception(e)
                         pass
 
                     await backend.set_dict(

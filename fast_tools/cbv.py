@@ -53,6 +53,7 @@ def cbv_decorator(
         "response_model_include": response_model_include,
         "response_model_exclude": response_model_exclude,
         "response_model_by_alias": response_model_by_alias,
+        "response_model_skip_defaults": response_model_skip_defaults,
         "response_model_exclude_unset": response_model_exclude_unset,
         "response_model_exclude_defaults": response_model_exclude_defaults,
         "response_model_exclude_none": response_model_exclude_none,
