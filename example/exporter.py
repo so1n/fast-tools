@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import FastAPI
 
 from fast_tools.base import RouteTrie
-from fast_tools.exporter import PrometheusMiddleware, get_metrics
+from fast_tools.exporter import PrometheusMiddleware, get_metrics, init_registry
 
 app: "FastAPI" = FastAPI()
 route_trie: "RouteTrie" = RouteTrie()
@@ -15,6 +15,7 @@ app.add_route("/metrics", get_metrics)
 
 @app.on_event("startup")
 async def startup_event() -> None:
+    init_registry()
     route_trie.insert_by_app(app)
 
 

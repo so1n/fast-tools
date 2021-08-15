@@ -33,8 +33,8 @@ class PrometheusMiddleware(BaseSearchRouteMiddleware):
         )
         self.request_time: "Histogram" = Histogram(
             f"{prefix}_requests_time",
-            "Histogram of requests time by url (in seconds) status:1 success status:0 fail",
-            ["app_name", "method", "url_path", "status"],
+            "Histogram of requests time by url",
+            ["app_name", "method", "url_path"],
         )
         self.exception_count: "Counter" = Counter(
             f"{prefix}_exceptions_total",
@@ -48,28 +48,25 @@ class PrometheusMiddleware(BaseSearchRouteMiddleware):
         )
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        method: str = request.method
         url_path, is_match = self.search_route_url(request)
 
         if url_path in self._block_url_set or not is_match:
             return await call_next(request)
 
-        label_list: list = [self._app_name, method, url_path]
+        label_list: list = [self._app_name, request.method, url_path]
         self.request_in_progress.labels(*label_list).inc()
         self.request_count.labels(*label_list).inc()
 
         status_code: int = 500
         start_time: float = time.time()
-        request_result: int = 0
         try:
             response = await call_next(request)
             status_code = response.status_code
-            request_result = 1
         except Exception as e:
             self.exception_count.labels(*label_list, type(e).__name__).inc()
             raise e
         finally:
-            self.request_time.labels(*label_list, request_result).observe(time.time() - start_time)
+            self.request_time.labels(*label_list).observe(time.time() - start_time)
 
             self.response_count.labels(*label_list, status_code).inc()
             self.request_in_progress.labels(*label_list).dec()
