@@ -12,38 +12,46 @@ pytestmark = pytest.mark.asyncio
 @pytest.fixture()
 async def redis_helper() -> AsyncGenerator[RedisHelper, None]:
     redis_helper: RedisHelper = RedisHelper()
-    redis_helper.init(
-        await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"),
-    )
-    yield redis_helper
-    await redis_helper.close()
+    try:
+        redis_helper.init(
+            await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"),
+        )
+        yield redis_helper
+    except Exception:
+        await redis_helper.close()
 
 
 class TestRedisHelper:
-    def test_not_run_init(self) -> None:
+    def test_not_call_init(self) -> None:
         with pytest.raises(ConnectionError) as e:
             RedisHelper().client
         assert e.value.args[0] == "Not init RedisHelper, please run RedisHelper.init"
 
     async def test_init(self) -> None:
         redis_helper: RedisHelper = RedisHelper()
+        # init error pool
         with pytest.raises(ConnectionError) as e:
             redis_helper.init(None)  # type: ignore
         assert e.value.args[0] == "conn_pool is none"
 
+        # init success
         redis_helper.init(
             await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"), namespace="test"
         )
         assert redis_helper.namespace == "test"
 
+        # repeat call
         with pytest.raises(ConnectionError) as e:
             redis_helper.init(
                 await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"),
             )
         assert e.value.args[0].startswith("Init error, RedisHelper already init")
 
+        # close redis pool
         await redis_helper.close()
         assert redis_helper.closed()
+
+        # reinitialize
         redis_helper.init(
             await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"),
         )
@@ -87,8 +95,6 @@ class TestRedisHelper:
         assert await redis_helper.execute("del", "test")
 
         assert not await redis_helper.hmget_dict("test")
-
-        await redis_helper.close()
 
     async def test_execute(self) -> None:
         redis_helper: RedisHelper = RedisHelper()

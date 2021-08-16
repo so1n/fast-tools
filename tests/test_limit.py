@@ -8,6 +8,8 @@ from starlette.testclient import TestClient
 
 from example.limit import app
 from fast_tools.base.redis_helper import RedisHelper
+from fast_tools.limit.backend import RedisCellBackend, RedisFixedWindowBackend, RedisTokenBucketBackend, TokenBucket
+from fast_tools.limit.rule import Rule
 
 from .conftest import AnyStringWith  # type: ignore
 
@@ -95,3 +97,36 @@ class TestLimit:
             assert response.status_code == 200
             response = client.get("/api/user/login?uid=123&group=admin")
             assert response.status_code == 429
+
+    def test_expected_time(self) -> None:
+        async def _test() -> None:
+            rule: Rule = Rule(second=10, gen_token_num=1, block_time=20, max_token_num=1)
+            token_bucket: TokenBucket = TokenBucket()
+            token_bucket.can_next("test_memory_token_bucket", rule=rule)
+            assert token_bucket.expected_time("test_memory_token_bucket", rule=rule) == 10
+            token_bucket.can_next("test_memory_token_bucket", rule=rule)
+            assert 19 <= token_bucket.expected_time("test_memory_token_bucket", rule=rule) <= 20
+
+            redis_helper: RedisHelper = RedisHelper()
+            redis_helper.init(await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"))
+            redis_fixed_window_backend: RedisFixedWindowBackend = RedisFixedWindowBackend(redis_helper)
+            await redis_fixed_window_backend.can_next("test_fixed_window", rule=rule)  # type: ignore
+            assert await redis_fixed_window_backend.expected_time("test_fixed_window", rule=rule) == 10  # type: ignore
+            await redis_fixed_window_backend.can_next("test_fixed_window", rule=rule)  # type: ignore
+            assert await redis_fixed_window_backend.expected_time("test_fixed_window", rule=rule) == 20  # type: ignore
+            redis_token_bucket_backend: RedisTokenBucketBackend = RedisTokenBucketBackend(redis_helper)
+            await redis_token_bucket_backend.can_next("test_token_bucket", rule=rule)  # type: ignore
+            assert (
+                9 <= await redis_token_bucket_backend.expected_time("test_token_bucket", rule=rule) <= 10
+            )  # type: ignore
+            await redis_token_bucket_backend.can_next("test_token_bucket", rule=rule)  # type: ignore
+            assert await redis_fixed_window_backend.expected_time("test_token_bucket", rule=rule) == 20  # type: ignore
+            redis_cell_backend: RedisCellBackend = RedisCellBackend(redis_helper)
+            await redis_cell_backend.can_next("test_redis_cell", rule=rule)  # type: ignore
+            assert 9 <= await redis_cell_backend.expected_time("test_redis_cell", rule=rule) <= 10  # type: ignore
+            await redis_cell_backend.can_next("test_redis_cell", rule=rule)  # type: ignore
+            assert await redis_cell_backend.expected_time("test_redis_cell", rule=rule) == 20  # type: ignore
+            await redis_helper.close()
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(_test())

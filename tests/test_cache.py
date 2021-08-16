@@ -28,6 +28,7 @@ class TestCache:
         loop.run_until_complete(clear())
 
         with TestClient(app) as client:
+            # key by func
             index_1_response: Response = client.get("/")
             time.sleep(0.1)
             index_2_response: Response = client.get("/")
@@ -35,6 +36,7 @@ class TestCache:
             assert "cache-control" not in index_1_response.headers
             assert index_2_response.headers["cache-control"].startswith("max-age")
 
+            # key by uid param
             login_1_response: Response = client.get("/api/users/login?uid=123")
             time.sleep(0.1)
             login_2_response: Response = client.get("/api/users/login?uid=123")
@@ -46,6 +48,7 @@ class TestCache:
             assert login_2_response.headers["cache-control"].startswith("max-age")
             assert "cache-control" not in login_3_response.headers
 
+            # can't cache func
             null_1_response: Response = client.get("/api/null")
             time.sleep(0.1)
             null_2_response: Response = client.get("/api/null")
@@ -53,6 +56,7 @@ class TestCache:
             assert "cache-control" not in null_1_response.headers
             assert "cache-control" not in null_2_response.headers
 
+            # use param key, but not found request param
             with pytest.raises(ValueError) as e:
                 client.get("/api/get_key_error")
             assert e.value.args[0] == "Can not found request param"

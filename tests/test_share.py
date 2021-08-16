@@ -28,14 +28,27 @@ class TestShare:
     async def test_class_wrapper_do(self) -> None:
         class TestClassWrapperDo(object):
             @share.wrapper_do()
+            # share by instance
             async def delay_print(self, num: int) -> int:
                 return await delay_print(num)
 
-        test_class_wrapper_do: "TestClassWrapperDo" = TestClassWrapperDo()
+            @share.wrapper_do(include_class=False)
+            # share by class
+            async def delay_print_1(self, num: int) -> int:
+                return await delay_print(num)
+
+        test_class_wrapper_do_1: "TestClassWrapperDo" = TestClassWrapperDo()
+        test_class_wrapper_do_2: "TestClassWrapperDo" = TestClassWrapperDo()
 
         task_list: "List[Coroutine]" = [
-            test_class_wrapper_do.delay_print(i) for i in [21, 22, 23, 24, 25, 26, 27, 28, 29]
+            test_class_wrapper_do_1.delay_print(i) for i in [21, 22, 23, 24, 25, 26, 27, 28, 29]
         ]
+        task_list.extend(test_class_wrapper_do_2.delay_print(i) for i in [21, 22, 23, 24, 25, 26, 27, 28, 29])
+        done, _ = await asyncio.wait(task_list)
+        assert len({future.result() for future in done}) == 2
+
+        task_list = [test_class_wrapper_do_1.delay_print_1(i) for i in [21, 22, 23, 24, 25, 26, 27, 28, 29]]
+        task_list.extend(test_class_wrapper_do_2.delay_print_1(i) for i in [21, 22, 23, 24, 25, 26, 27, 28, 29])
         done, _ = await asyncio.wait(task_list)
         assert len({future.result() for future in done}) == 1
 

@@ -1,9 +1,20 @@
+import pytest
+
 from example.config import MyConfig
+from fast_tools.config import Json
 
 from .conftest import AnyStringWith  # type: ignore
 
 
 class TestConfig:
+    def test_inherit_error(self) -> None:
+        class CustomerField(Json):
+            ...
+
+        with pytest.raises(RuntimeError) as e:
+            CustomerField()
+        assert e.value.args[0] == "Only classes that inherit BaseField can be used"
+
     def test_config(self) -> None:
         ini_dict: dict = {
             "DEBUG": True,
