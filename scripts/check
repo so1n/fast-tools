@@ -1,0 +1,17 @@
+#!/bin/sh -e
+
+export PREFIX=""
+if [ -d 'venv' ] ; then
+    export PREFIX="venv/bin/"
+fi
+if [ -d '.venv' ] ; then
+    export PREFIX=".venv/bin/"
+fi
+
+set -x
+echo 'use venv path:' ${PREFIX}
+${PREFIX}mypy .
+${PREFIX}flake8
+${PREFIX}isort .
+${PREFIX}black .
+${PREFIX}autoflake --in-place --remove-unused-variables --recursive .
