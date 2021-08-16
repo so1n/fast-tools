@@ -58,9 +58,8 @@ class TokenBucket(BaseLimitBackend):
                 return diff_block_time
 
         now_token_num: int = self._update_tokens(bucket)
-
         self._cache_dict.set(key, bucket)
-        if now_token_num < bucket.max_token_num:
+        if now_token_num:
             return 0.0
         else:
             return 1 / bucket.rate

@@ -110,7 +110,10 @@ class RedisCellBackend(BaseRedisBackend):
             return await self._backend.client.ttl(block_time_key)
 
         result: List[int] = await self._call_cell(key, rule, 0)
-        return float(max(result[3], 0))
+        if result[2]:
+            return 0
+        else:
+            return result[4] / rule.gen_token_num
 
 
 class RedisTokenBucketBackend(BaseRedisBackend):
@@ -166,10 +169,13 @@ end
         block_time = await self._backend.client.get(block_time_key)
         if block_time:
             return await self._backend.client.ttl(block_time_key)
-        last_time = await self._backend.client.hget(key, "last_time")
-        if last_time is None:
+        last_time_str: Optional[str] = await self._backend.client.hget(key, "last_time")
+        last_token_str: Optional[str] = await self._backend.client.hget(key, "last_token")
+        if last_time_str is None or last_token_str is None:
             return 0
-        diff_time = last_time - time.time() * 1000
+        if int(last_token_str) > 0:
+            return 0
+        diff_time: float = time.time() - float(last_time_str)
         if diff_time > 0:
-            return diff_time
+            return (rule.total_second - diff_time) / rule.gen_token_num
         return 0
