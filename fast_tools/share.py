@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Optional, TypeVar, Union
 
@@ -97,13 +98,23 @@ class Share(object):
     ) -> Any:
         return await self._token_handle(key, func, args, kwargs)
 
-    def wrapper_do(self, key: Optional[str] = None) -> Callable:
+    def wrapper_do(self, key: Optional[str] = None, include_class: bool = True) -> Callable:
         def wrapper(func: Callable) -> Callable:
             key_name: str = func.__name__ + str(id(func)) if key is None else key
 
             @wraps(func)
             async def wrapper_func(*args: Any, **kwargs: Any) -> Any:
-                return await self._token_handle(key_name, func, args, kwargs)
+                real_key_name: str = key_name
+
+                if include_class and args:
+                    class_: Any = getattr(
+                        inspect.getmodule(func), func.__qualname__.split(".<locals>", 1)[0].rsplit(".", 1)[0]
+                    )
+                    if class_ is not func and isinstance(args[0], class_):
+                        real_key_name += f":{id(args[0])}"
+                    elif func.__qualname__.split(".")[-2] == args[0].__class__.__name__:
+                        real_key_name += f":{id(args[0])}"
+                return await self._token_handle(real_key_name, func, args, kwargs)
 
             return wrapper_func
 
