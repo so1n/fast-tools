@@ -21,7 +21,7 @@ setuptools.setup(
     ],
     extras_require={
         "prometheus": ["prometheus-client==0.8.0"],
-        "pydantic": ["pydantic==1.7.20"],
+        "pydantic": ["pydantic==1.8.2"],
         "redis": ["aioredis==1.3.1"],
         "statsd": ["aio_statsd==0.2.2.2"],
     },
