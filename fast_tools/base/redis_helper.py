@@ -1,6 +1,6 @@
 import asyncio
-import json
 import logging
+import pickle
 import time
 import uuid
 from contextvars import ContextVar
@@ -158,12 +158,13 @@ class RedisHelper(object):
         data = await self.execute("get", key)
         if not data or data == "":
             return {}
-        return json.loads(data)
+        return pickle.loads(data.encode("latin1"))
 
     async def set_dict(self, key: str, data: dict, timeout: Optional[int] = None) -> None:
-        await self.execute("set", key, json.dumps(data))
         if timeout:
-            await self.execute("EXPIRE", key, timeout)
+            await self.execute("SET", key, pickle.dumps(data).decode("latin1"), "ex", timeout)
+        else:
+            await self.execute("set", key, pickle.dumps(data).decode("latin1"))
 
     async def del_key(self, key: str, delay: Optional[int] = None) -> bool:
         if delay:
@@ -186,14 +187,14 @@ class RedisHelper(object):
         value_list: list = []
         for _key in key_dict.keys():
             value_list.append(_key)
-            value_list.append(json.dumps({_key: key_dict[_key]}))
+            value_list.append(pickle.dumps({_key: key_dict[_key]}).decode("latin1"))
         await self.execute("HMSET", key, *value_list)
 
     async def hget_dict(self, key: str, field: str) -> Any:
         value: Optional[str] = await self.execute("HGET", key, field)
         if value is None:
             return None
-        return json.loads(value)[field]
+        return pickle.loads(value.encode("latin1"))[field]
 
     async def hmget_dict(self, key: str) -> dict:
         return_dict = {}
@@ -202,7 +203,7 @@ class RedisHelper(object):
             scan, kv_list = await self.execute("HSCAN", key, scan)
             for i in range(0, len(kv_list) - 1, 2):
                 _key = kv_list[i]
-                _value = json.loads(kv_list[i + 1])
+                _value = pickle.loads(kv_list[i + 1].encode("latin1"))
                 try:
                     return_dict[_key] = _value[_key]
                 except Exception as e:
