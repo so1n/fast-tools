@@ -169,7 +169,7 @@ class Config:
                 raise e
 
         self._config_dict: Dict[str, Any] = {}
-        self._model: Optional[BaseModel] = None
+        self._proxy_model: Optional[BaseModel] = None
         if group:
             self._group = group
         elif "group" in environ:
@@ -183,6 +183,9 @@ class Config:
         else:
             self._config_dict = {key: value for key, value in environ.items()}
         self._init_obj()
+
+    def __getattr__(self, item: Any) -> None:
+        return getattr(self._proxy_model, item)
 
     def _init_obj(self) -> None:
         annotation_dict: Dict[str, Tuple[Any, ...]] = {}
@@ -214,14 +217,16 @@ class Config:
             __validators__=None,
             **annotation_dict,
         )
-        self._model = dynamic_model(**self._config_dict)
-        self.__dict__.update(self._model.dict())
+        self._proxy_model = dynamic_model(**self._config_dict)
+        for _class in self.__class__.mro():
+            for key in getattr(_class, "__annotations__", []):
+                self.__dict__[key] = getattr(self._proxy_model, key)
 
     @property
     def model(self) -> BaseModel:
-        if not self._model:
+        if not self._proxy_model:
             raise ValueError("Can not found model")
-        return self._model
+        return self._proxy_model
 
     def _read_file(self, file_name: str) -> None:
         if file_name.endswith(".yml"):
