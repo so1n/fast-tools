@@ -96,16 +96,6 @@ class ContextBaseModel(object):
     def __setattr__(self, key: str, value: Any) -> None:
         _FAST_TOOLS_CONTEXT.get()[key] = value
 
-    def __enter__(self) -> "ContextBaseModel":
-        _TOKEN_TEMP[0] = _FAST_TOOLS_CONTEXT.set({})
-        return self
-
-    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        token: Optional[Token] = _TOKEN_TEMP[0]
-        if token:
-            _FAST_TOOLS_CONTEXT.reset(token)
-            _TOKEN_TEMP[0] = None
-
     def to_dict(self, is_safe_return: bool = False) -> Dict[str, Any]:
         _dict: _CONTEXT_DICT_TYPE = {}
         for key, annotation in get_type_hints(self.__class__).items():
@@ -126,6 +116,22 @@ class ContextBaseModel(object):
         (regardless of whether the response is an exception)"""
 
 
+class WithContext(object):
+    request: Request
+
+    def __init__(self) -> None:
+        self._token: Optional[Token] = None
+
+    def __enter__(self) -> "WithContext":
+        self._token = _FAST_TOOLS_CONTEXT.set({})
+        return self
+
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        if self._token:
+            _FAST_TOOLS_CONTEXT.reset(self._token)
+            self._token = None
+
+
 class ContextMiddleware(BaseHTTPMiddleware):
     def __init__(self, context_model: ContextBaseModel, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
@@ -139,7 +145,7 @@ class ContextMiddleware(BaseHTTPMiddleware):
             logging.error(f"{corn.__name__} error:{e} traceback info:{traceback.format_exc()}")
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        with self.context_model as context:
+        with WithContext() as context:
             context.request = request
             await self._safe_context_life_handle(self.context_model.before_request(request))
 
