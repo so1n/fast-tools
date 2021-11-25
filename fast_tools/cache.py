@@ -32,13 +32,13 @@ def cache(
     after_cache_response_list: Optional[List[Callable[[Response, "redis_helper.RedisHelper", str], Awaitable]]] = None,
 ) -> Callable:
     """
-    backend: now only support `RedisHelper`
-    expire: cache expiration time
-    namespace: key namespace
-    alias: func alias name
-    json_response: response like `JSONResponse` or `UJSONResponse`
-    get_key_func:
-    after_cache_response:list: cache response data handle
+    :param backend: now only support `RedisHelper`
+    :param expire: cache expiration time
+    :param namespace: key namespace
+    :param alias: func alias name
+    :param json_response: response like `JSONResponse` or `UJSONResponse`
+    :param get_key_func:
+    :param after_cache_response_list: cache response data handle
     """
 
     def wrapper(func: Callable) -> Callable:
