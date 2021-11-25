@@ -106,3 +106,4 @@ venv.bak/
 *.swp
 .idea/
 .vscode/
+.portry.lock

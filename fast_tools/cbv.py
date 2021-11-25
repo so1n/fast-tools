@@ -2,7 +2,9 @@ import inspect
 from typing import Any, Callable, Dict, List, Optional, Sequence, Set, Type, Union, get_type_hints
 
 from fastapi import APIRouter, Depends, Response, params
+from fastapi.datastructures import Default, DefaultPlaceholder
 from fastapi.encoders import DictIntStrAny, SetIntStr
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from pydantic.typing import is_classvar
 
@@ -30,10 +32,10 @@ def cbv_decorator(
     response_model_exclude_defaults: bool = False,
     response_model_exclude_none: bool = False,
     include_in_schema: bool = True,
-    response_class: Type[Response] = None,
     name: str = None,
     route_class_override: Optional[Type[APIRoute]] = None,
     callbacks: List[APIRoute] = None,
+    response_class: Union[Type[Response], DefaultPlaceholder] = Default(JSONResponse),
 ) -> Callable:
     if response_model_exclude is None:
         response_model_exclude = set()
