@@ -19,6 +19,7 @@ ojson = {version = "^0.1.0", optional = true }
 ujson = {version = "^4.0.2", optional = true }
 PyYAML = "^5.4.1"
 opentracing = { version = "^2.4.0", optional = true }
+apache-skywalking = { version = "^0.7.0", optional = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.2"
@@ -50,6 +51,7 @@ config = ["environs"]
 ojson = ["ojson"]
 ujson = ["ujson"]
 opentracing = ["opentracing"]
+apache-skywalking = ["apache-skywalking"]
 
 [tool.black]
 line-length = 120
