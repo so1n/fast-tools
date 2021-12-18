@@ -23,11 +23,11 @@ class TestLazyProperty:
 
     async def test_lazy_property_class(self) -> None:
         class Demo(object):
-            @LazyProperty(is_class_func=True)
+            @LazyProperty()
             def demo_func(self, a: int, b: int) -> int:
                 return a + b
 
-            @LazyProperty(is_class_func=True)
+            @LazyProperty()
             async def async_demo_func(self, a: int, b: int) -> int:
                 return a + b
 

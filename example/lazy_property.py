@@ -4,11 +4,11 @@ from fast_tools.lazy_property import LazyProperty
 
 
 class Demo(object):
-    @LazyProperty(is_class_func=True)
+    @LazyProperty()
     def demo1_func(self, a: int, b: int) -> int:
         return a + b
 
-    @LazyProperty(is_class_func=True)
+    @LazyProperty()
     async def demo2_func(self, a: int, b: int) -> int:
         return a + b
 
