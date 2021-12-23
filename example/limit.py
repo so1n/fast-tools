@@ -72,11 +72,21 @@ async def redis_token_bucket(request: Request) -> dict:
 
 @app.get("/redis/cell")
 @limit.limit(
-    [limit.Rule(second=1, gen_token_num=1, init_token_num=1, block_time=1, max_token_num=1)],
+    [limit.Rule(second=1, gen_token_num=5, init_token_num=1, block_time=1, max_token_num=10)],
     limit.backend.RedisCellBackend(redis_helper),
     limit_func=limit_path_and_ip,
 )
 async def redis_cell(request: Request) -> dict:
+    return {"Hello": "World"}
+
+
+@app.get("/redis/cell_like_token_bucket")
+@limit.limit(
+    [limit.Rule(second=1, gen_token_num=1, init_token_num=1, block_time=1, max_token_num=1)],
+    limit.backend.RedisCellBackend(redis_helper),
+    limit_func=limit_path_and_ip,
+)
+async def redis_cell_like_token_bucket(request: Request) -> dict:
     return {"Hello": "World"}
 
 

@@ -1,3 +1,4 @@
+import asyncio
 import time
 from abc import ABC
 from typing import Any, Awaitable, Callable, Coroutine, List, Optional, Union
@@ -63,7 +64,7 @@ class RedisFixedWindowBackend(BaseRedisBackend):
         return _expected_time()
 
 
-class RedisCellBackend(BaseRedisBackend):
+class BaseRedisCellBackend(BaseRedisBackend):
     """
     use redis-cell module
     learn more:https://github.com/brandur/redis-cell
@@ -90,17 +91,6 @@ class RedisCellBackend(BaseRedisBackend):
         )
         return result
 
-    async def can_next(self, key: str, rule: Rule, token_num: int = 1) -> bool:
-        key = f"{self._backend.namespace}:{key}"
-
-        async def _can_next() -> bool:
-            result: List[int] = await self._call_cell(key, rule, token_num)
-            can_next: bool = not bool(result[0])
-            await self._backend.client.expire(key, rule.total_second)
-            return can_next
-
-        return await self._block_time_handle(key, rule, _can_next)
-
     async def expected_time(self, key: str, rule: Rule) -> float:
         key = f"{self._backend.namespace}:{key}"
 
@@ -116,13 +106,42 @@ class RedisCellBackend(BaseRedisBackend):
             return result[4] / rule.gen_token_num
 
 
+class RedisCellBackend(BaseRedisCellBackend):
+    async def can_next(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+        key = f"{self._backend.namespace}:{key}"
+
+        async def _can_next() -> bool:
+            result: List[int] = await self._call_cell(key, rule, token_num)
+            can_next: bool = not bool(result[0])
+            if can_next and result[4]:
+                # until the limit will reset to its maximum capacity
+                await asyncio.sleep(result[4])
+            await self._backend.client.expire(key, rule.total_second)
+            return can_next
+
+        return await self._block_time_handle(key, rule, _can_next)
+
+
+class RedisCellLikeTokenBucketBackend(BaseRedisCellBackend):
+    async def can_next(self, key: str, rule: Rule, token_num: int = 1) -> bool:
+        key = f"{self._backend.namespace}:{key}"
+
+        async def _can_next() -> bool:
+            result: List[int] = await self._call_cell(key, rule, token_num)
+            can_next: bool = not bool(result[0])
+            await self._backend.client.expire(key, rule.total_second)
+            return can_next
+
+        return await self._block_time_handle(key, rule, _can_next)
+
+
 class RedisTokenBucketBackend(BaseRedisBackend):
     _lua_script = """
 local key = KEYS[1]
-local current_time = tonumber(ARGV[1])
-local interval_per_token = tonumber(ARGV[2])
-local max_token = tonumber(ARGV[3])
-local init_token = tonumber(ARGV[4])
+local current_time = redis.call('TIME')[1]
+local interval_per_token = tonumber(ARGV[1])
+local max_token = tonumber(ARGV[2])
+local init_token = tonumber(ARGV[3])
 local tokens
 local bucket = redis.call("hmget", key, "last_time", "last_token")
 local last_time= bucket[1]
@@ -155,7 +174,7 @@ end
 
         async def _can_next() -> bool:
             now_token: int = await self._backend.client.eval(
-                self._lua_script, keys=[key], args=[time.time(), rule.rate, rule.max_token_num, rule.init_token_num]
+                self._lua_script, keys=[key], args=[rule.rate, rule.max_token_num, rule.init_token_num]
             )
             await self._backend.client.expire(key, rule.total_second)
             return now_token >= 0
