@@ -7,8 +7,15 @@ from fast_tools import limit
 from fast_tools.base import RedisHelper
 
 
-def limit_by_user(requests: Request) -> Tuple[str, str]:
-    return requests.query_params.get("uid"), requests.query_params.get("group")
+##############
+# limit func #
+##############
+def middleware_limit_by_user_func(request: Request) -> Tuple[str, str]:
+    return request.query_params.get("uid"), request.query_params.get("group")
+
+
+def middleware_limit_by_method_func(request: Request) -> Tuple[str, str]:
+    return request.url.path, request.method
 
 
 def limit_path_and_ip(request: Request) -> Tuple[str, Optional[str]]:
@@ -27,6 +34,9 @@ def limit_by_group(request: Request) -> Tuple[str, Optional[str]]:
     return ip, request.query_params.get("user")
 
 
+########
+# init #
+########
 app: "FastAPI" = FastAPI()
 redis_helper: "RedisHelper" = RedisHelper()
 
@@ -37,21 +47,9 @@ async def startup() -> None:
         redis_helper.init(await aioredis.create_pool("redis://localhost", minsize=1, maxsize=10, encoding="utf-8"))
 
 
-app.add_middleware(
-    limit.LimitMiddleware,
-    limit_func=limit_by_user,
-    rule_list=[
-        (
-            r"^/api/user",
-            [
-                limit.Rule(second=10, gen_token_num=1, init_token_num=1, group="user"),
-                limit.Rule(second=10, gen_token_num=1, init_token_num=2, group="admin"),
-            ],
-        )
-    ],
-)
-
-
+#################
+# limit by func #
+#################
 @app.get("/")
 @limit.limit(
     [limit.Rule(second=1, gen_token_num=1, init_token_num=1, block_time=1)],
@@ -115,6 +113,32 @@ async def decorator(request: Request) -> dict:
     return {"Hello": "World"}
 
 
+#######################
+# limit by middleware #
+#######################
+app.add_middleware(
+    limit.LimitMiddleware,
+    rule_list=[
+        (
+            r"^/api/user",
+            middleware_limit_by_user_func,
+            [
+                limit.Rule(second=10, gen_token_num=1, init_token_num=1, group="user"),
+                limit.Rule(second=10, gen_token_num=1, init_token_num=2, group="admin"),
+            ],
+        ),
+        (
+            r"^/api/test_method",
+            middleware_limit_by_method_func,
+            [
+                limit.Rule(second=10, gen_token_num=1, init_token_num=1, group="GET"),
+                limit.Rule(second=10, gen_token_num=1, init_token_num=2, group="POST"),
+            ],
+        ),
+    ],
+)
+
+
 @app.get("/api/user/login")
 async def user_login() -> dict:
     return {"Hello": "World"}
@@ -122,6 +146,16 @@ async def user_login() -> dict:
 
 @app.get("/api/user/logout")
 async def user_logout() -> dict:
+    return {"Hello": "World"}
+
+
+@app.get("/api/test_method")
+async def method_get() -> dict:
+    return {"Hello": "World"}
+
+
+@app.post("/api/test_method")
+async def method_post() -> dict:
     return {"Hello": "World"}
 
 

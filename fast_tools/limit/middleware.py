@@ -21,8 +21,7 @@ class LimitMiddleware(BaseHTTPMiddleware):
         backend: BaseLimitBackend = TokenBucket(),
         status_code: int = DEFAULT_STATUS_CODE,
         content: str = DEFAULT_CONTENT,
-        limit_func: Optional[RULE_FUNC_TYPE] = None,
-        rule_list: List[Tuple[str, List[Rule]]] = None,
+        rule_list: List[Tuple[str, Optional[RULE_FUNC_TYPE], List[Rule]]] = None,
         enable_match_fail_pass: bool = True,
     ) -> None:
         """
@@ -37,12 +36,13 @@ class LimitMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._backend: BaseLimitBackend = backend
         self._content: str = content
-        self._func: Optional[RULE_FUNC_TYPE] = limit_func
         self._status_code: int = status_code
         self._enable_match_fail_pass: bool = enable_match_fail_pass
 
-        self._rule_list: List[Tuple[re.Pattern[str], List[Rule]]] = (
-            [(re.compile(key), value) for key, value in rule_list] if rule_list else []
+        self._rule_list: List[Tuple[re.Pattern[str], Optional[RULE_FUNC_TYPE], List[Rule]]] = (
+            [(re.compile(pattern_str), limit_func, rule) for pattern_str, limit_func, rule in rule_list]
+            if rule_list
+            else []
         )
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -53,7 +53,7 @@ class LimitMiddleware(BaseHTTPMiddleware):
                 return Response(content=self._content, status_code=self._status_code)
 
         url_path: str = request.url.path
-        for pattern, rule_list in self._rule_list:
+        for pattern, rule_func, rule_list in self._rule_list:
             if pattern.match(url_path):
                 break
         else:
@@ -61,11 +61,11 @@ class LimitMiddleware(BaseHTTPMiddleware):
 
         key: str = str(pattern)
         group: Optional[str] = None
-        if self._func is not None:
-            if asyncio.iscoroutinefunction(self._func):
-                key, group = await self._func(request)  # type: ignore
+        if rule_func is not None:
+            if asyncio.iscoroutinefunction(rule_func):
+                key, group = await rule_func(request)  # type: ignore
             else:
-                key, group = self._func(request)  # type: ignore
+                key, group = rule_func(request)  # type: ignore
 
         for rule in rule_list:
             if rule.group == group:
