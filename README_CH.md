@@ -1,6 +1,8 @@
 # fast-tools
 `fast-tools`是一个`FastApi/Starlette`的库合集, 大部分库都可用于FastApi/Starlette, 少部库只支持`FastApi`是为了兼容`FastApi`的不足
 
+> Note: 当前主分支正在开发中, 文档可能不统一
+
 ```python
 # 名字由来
 project_name = ('FastApi'[:2] + 'Starlette'[:2]).lower() + '-tools'

@@ -1,7 +1,9 @@
 # fast-tools
 `fast-tools` is a `FastApi/Starlette` toolset, Most of the tools can be used in FastApi/Starlette, a few tools only support `FastApi` which is divided into the lack of compatibility with `FastApi`
 
-Note: this is alpha quality code still, the API may change, and things may fall apart while you try it.
+Note:
+    - this is alpha quality code still, the API may change, and things may fall apart while you try it.
+    - The current branch is under development and the documentation may not be unified
 
 ```python
 # origin of name

@@ -38,7 +38,6 @@ class Lock(object):
         block_timeout: Optional[int] = None,
         sleep_time: float = 0.1,
     ):
-
         self._redis: "RedisHelper" = redis_helper
         self._lock_key: str = f"{self._redis.namespace}:lock:{lock_key}"
         self._timeout: int = timeout

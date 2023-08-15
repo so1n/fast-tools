@@ -14,7 +14,6 @@ from .conftest import AnyStringWith  # type: ignore
 
 class TestContext:
     def test_contest(self, mocker: MockFixture) -> None:
-
         with TestClient(app) as client:
             response: Response = client.get("/")
             resp_dict: dict = response.json()

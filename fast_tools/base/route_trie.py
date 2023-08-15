@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Union
 
-from starlette.routing import Match, Route
+from starlette.routing import BaseRoute, Host, Match, Mount, Route
 from starlette.types import ASGIApp, Scope
 
 
@@ -21,15 +21,26 @@ class RouteTrie:
         self.root: Dict[str, Union["RouteTrie", dict, Route, List[Route]]] = {}
         self.route_dict: Dict["RouteTrie", List[Route]] = {}
 
+    def insert_by_route(self, route: BaseRoute, path: str = ""):
+        if isinstance(route, Route):
+            url: str = path + route.path
+            self.insert(url, route)
+        elif isinstance(route, (Mount, Host)):
+            path = path + route.path
+            for r in route.routes:
+                self.insert_by_route(r, path=path)
+        else:
+            raise TypeError(f"Not support class:{route.__class__}")
+
     def insert_by_app(self, app: ASGIApp) -> None:
         while True:
             sub_app: ASGIApp = getattr(app, "app", None)
             if not sub_app:
                 break
             app = sub_app
-        for route in app.routes:
-            url: str = route.path
-            self.insert(url, route)
+
+        for route in app.routes:  # type: ignore
+            self.insert_by_route(route)
 
     def insert(self, url_path: str, route: Route) -> None:
         cur_node: "RouteNode" = self.root_node
