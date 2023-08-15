@@ -95,3 +95,17 @@ class TestShare:
         b_set = {future.result() for future in (await b_task)[0]}
         assert len(a_set) == 1 and len(b_set) == 1
         assert a_set.pop() != b_set.pop()
+
+    async def test_not_force_forget(self) -> None:
+        task_list = [share.do("test_do", delay_print, args=[i]) for i in [1, 2, 3, 4, 5, 6, 7, 8, 9]]
+        a_task = asyncio.Task(asyncio.wait(task_list))
+        await asyncio.sleep(0.1)
+        share.forget("test_do", force=False)
+        task_list = [share.do("test_do", delay_print, args=[i]) for i in [11, 12, 13, 14, 15, 16, 17, 18, 19]]
+        b_task = asyncio.Task(asyncio.wait(task_list))
+        await asyncio.sleep(0.1)
+
+        a_set = {future.result() for future in (await a_task)[0]}
+        b_set = {future.result() for future in (await b_task)[0]}
+        assert len(a_set) == 1 and len(b_set) == 1
+        assert a_set.pop() == b_set.pop()
