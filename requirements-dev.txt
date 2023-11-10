@@ -58,7 +58,7 @@ requests==2.26.0; (python_version >= "2.7" and python_full_version < "3.0.0") or
 rfc3986==1.5.0; python_version >= "3.6"
 six==1.16.0; python_full_version >= "3.6.1" and python_version >= "3.5" and (python_version >= "3.7" and python_full_version < "3.0.0" or python_full_version >= "3.3.0" and python_version >= "3.7")
 sniffio==1.2.0; python_full_version >= "3.6.2" and python_version >= "3.6"
-starlette==0.14.2; python_version >= "3.6"
+starlette==0.25.0; python_version >= "3.6"
 threadloop==1.0.2; python_version >= "3.7"
 thrift==0.15.0; python_version >= "3.7"
 toml==0.10.2; python_full_version >= "3.6.1" and python_version >= "3.6" and (python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.3.0" and python_version >= "3.6")
